@@ -1,0 +1,16 @@
+
+> kitchen@0.1.0 dev
+> next dev --turbopack -p 3002
+
+   ▲ Next.js 15.5.4 (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.185.38:3002
+
+ ✓ Starting...
+ ✓ Ready in 3.9s
+ ○ Compiling / ...
+ ✓ Compiled / in 4.2s
+ GET / 200 in 4746ms
+ GET / 200 in 108ms
+ ✓ Compiled /favicon.ico in 258ms
+ GET /favicon.ico?favicon.0b3bf435.ico 200 in 610ms
