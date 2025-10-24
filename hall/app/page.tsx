@@ -1,6 +1,7 @@
 import type { DragEvent } from "react";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
+declare module "lucide-react";
 
 type Item = {
   id: number;
@@ -11,7 +12,7 @@ type Item = {
 type FromType = "pending" | "done";
 
 export default function OrderBoard() {
-  const [done, setDone] = useState([]);
+  const [done, setDone] = useState<Item[]>([]);
   const [pending, setPending] = useState([
     { id: 1, label: '○（卓番）：呼び出し', color: 'bg-red-600' },
     { id: 2, label: '○（卓番）：呼び出し', color: 'bg-red-600' },
