@@ -1,3 +1,4 @@
+'use client'
 import type { DragEvent } from "react";
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
