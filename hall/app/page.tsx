@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Trash2 } from 'lucide-react';
 
 type Item = {
@@ -12,19 +12,22 @@ type Item = {
 
 export default function OrderBoard() {
   const [done, setDone] = useState<Item[]>([
-    { id: 1, label: '〇（卓番）：呼び出し', color: 'red', x: 50, y: 50 },
-    { id: 2, label: '〇（卓番）：〇（個数）はし', color: 'gray', x: 50, y: 120 },
-    { id: 3, label: '〇（卓番）：〇（個数）取り皿', color: 'gray', x: 50, y: 190 },
-    { id: 4, label: '〇（卓番）：〇（個数）水', color: 'blue', x: 50, y: 260 },
-    { id: 5, label: '〇（卓番）：皿', color: 'gray', x: 50, y: 330 },
-    { id: 6, label: '〇（卓番）：醤油', color: 'gray', x: 50, y: 400 },
+    { id: 1, label: '呼び出し', color: 'red', x: 50, y: 50 },
+    { id: 2, label: 'はし', color: 'gray', x: 50, y: 120 },
+    { id: 3, label: '取り皿', color: 'gray', x: 50, y: 190 },
+    { id: 4, label: '水', color: 'blue', x: 50, y: 260 },
+    { id: 5, label: '皿', color: 'gray', x: 50, y: 330 },
+    { id: 6, label: '醤油', color: 'gray', x: 50, y: 400 },
   ]);
 
   const [pending, setPending] = useState<Item[]>([
-    { id: 7, label: '○（卓番）：呼び出し', color: 'red', x: 400, y: 50 },
-    { id: 8, label: '○（卓番）：ドリンク', color: 'blue', x: 400, y: 120 },
-    { id: 9, label: '○（卓番）：おしぼり', color: 'gray', x: 400, y: 190 },
+    { id: 7, label: '呼び出し', color: 'red', x: 400, y: 50 },
+    { id: 8, label: 'ドリンク', color: 'blue', x: 400, y: 120 },
+    { id: 9, label: 'おしぼり', color: 'gray', x: 400, y: 190 },
   ]);
+
+  // ゴミ箱の位置とサイズ
+  const trashRef = useRef<HTMLDivElement>(null);
 
   // ドラッグ用関数
   const onMouseDown = (e: React.MouseEvent, id: number, from: 'done' | 'pending') => {
@@ -48,9 +51,27 @@ export default function OrderBoard() {
       }
     };
 
-    const onMouseUp = () => {
+    const onMouseUp = (e: MouseEvent) => {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+
+      // ゴミ箱削除判定
+      if (trashRef.current) {
+        const trashRect = trashRef.current.getBoundingClientRect();
+        if (
+          e.clientX >= trashRect.left &&
+          e.clientX <= trashRect.right &&
+          e.clientY >= trashRect.top &&
+          e.clientY <= trashRect.bottom
+        ) {
+          // 削除
+          if (from === 'done') {
+            setDone((prev) => prev.filter((i) => i.id !== id));
+          } else {
+            setPending((prev) => prev.filter((i) => i.id !== id));
+          }
+        }
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -65,12 +86,18 @@ export default function OrderBoard() {
         <div className="flex-1" style={{ backgroundColor: '#FFFAE2' }}></div>
       </div>
 
+      {/* タイトル固定 */}
+      <div className="fixed top-6 left-6 w-2/5 z-10">
+        <h1 className="text-4xl font-bold mb-6">済</h1>
+      </div>
+      <div className="fixed top-6 left-[45%] z-10">
+        <h1 className="text-4xl font-bold mb-6">未</h1>
+      </div>
+
       {/* メインエリア（スクロール可能） */}
       <div className="relative h-screen flex overflow-y-auto z-10">
         {/* 済エリア */}
         <div className="w-2/5 relative p-6 flex flex-col items-center">
-          <h1 className="text-4xl mb-6">済</h1>
-
           {done.map((item) => (
             <button
               key={item.id}
@@ -91,8 +118,6 @@ export default function OrderBoard() {
 
         {/* 未エリア */}
         <div className="flex-1 relative p-6 flex flex-col items-center">
-          <h1 className="text-4xl mb-6">未</h1>
-
           {pending.map((item) => (
             <button
               key={item.id}
@@ -113,7 +138,10 @@ export default function OrderBoard() {
       </div>
 
       {/* 🗑 ゴミ箱（常に固定表示） */}
-      <div className="fixed bottom-6 left-[20%] flex justify-center items-center z-20">
+      <div
+        ref={trashRef}
+        className="fixed bottom-6 left-[20%] flex justify-center items-center z-20"
+      >
         <div className="bg-white rounded-full shadow-lg p-4 border">
           <Trash2 size={56} className="text-gray-700" />
         </div>
