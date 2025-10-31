@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 
 type Item = {
@@ -11,23 +11,40 @@ type Item = {
 };
 
 export default function OrderBoard() {
-  const [done, setDone] = useState<Item[]>([
-    { id: 1, label: '呼び出し', color: 'red', x: 50, y: 50 },
-    { id: 2, label: 'はし', color: 'gray', x: 50, y: 120 },
-    { id: 3, label: '取り皿', color: 'gray', x: 50, y: 190 },
-    { id: 4, label: '水', color: 'blue', x: 50, y: 260 },
-    { id: 5, label: '皿', color: 'gray', x: 50, y: 330 },
-    { id: 6, label: '醤油', color: 'gray', x: 50, y: 400 },
-  ]);
-
-  const [pending, setPending] = useState<Item[]>([
-    { id: 7, label: '呼び出し', color: 'red', x: 400, y: 50 },
-    { id: 8, label: 'ドリンク', color: 'blue', x: 400, y: 120 },
-    { id: 9, label: 'おしぼり', color: 'gray', x: 400, y: 190 },
-  ]);
-
-  // ゴミ箱の位置とサイズ
+  const [done, setDone] = useState<Item[]>([]);
+  const [pending, setPending] = useState<Item[]>([]);
   const trashRef = useRef<HTMLDivElement>(null);
+
+  const itemWidth = 100; // ボタン幅の目安
+  const itemHeight = 40; // ボタン高さの目安
+
+  useEffect(() => {
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
+
+    // 済エリア幅（2/5）
+    const doneWidth = (2 / 5) * screenWidth;
+    const doneCenterX = doneWidth / 2 - itemWidth / 2;
+    const doneCenterY = screenHeight / 2 - itemHeight / 2;
+
+    // 未エリア幅（3/5）
+    const pendingWidth = (3 / 5) * screenWidth;
+    const pendingStartX = doneWidth;
+    const pendingCenterX = pendingStartX + pendingWidth / 2 - itemWidth / 2;
+    const pendingCenterY = screenHeight / 2 - itemHeight / 2;
+
+    setDone([
+      { id: 1, label: '呼び出し', color: 'red', x: doneCenterX, y: doneCenterY },
+      { id: 2, label: 'はし', color: 'gray', x: doneCenterX, y: doneCenterY + 60 },
+      { id: 3, label: '取り皿', color: 'gray', x: doneCenterX, y: doneCenterY + 120 },
+    ]);
+
+    setPending([
+      { id: 4, label: '呼び出し', color: 'red', x: pendingCenterX, y: pendingCenterY },
+      { id: 5, label: 'ドリンク', color: 'blue', x: pendingCenterX, y: pendingCenterY + 60 },
+      { id: 6, label: 'おしぼり', color: 'gray', x: pendingCenterX, y: pendingCenterY + 120 },
+    ]);
+  }, []);
 
   // ドラッグ用関数
   const onMouseDown = (e: React.MouseEvent, id: number, from: 'done' | 'pending') => {
@@ -64,7 +81,6 @@ export default function OrderBoard() {
           e.clientY >= trashRect.top &&
           e.clientY <= trashRect.bottom
         ) {
-          // 削除
           if (from === 'done') {
             setDone((prev) => prev.filter((i) => i.id !== id));
           } else {
@@ -94,7 +110,7 @@ export default function OrderBoard() {
         <h1 className="text-4xl font-bold mb-6">未</h1>
       </div>
 
-      {/* メインエリア（スクロール可能） */}
+      {/* メインエリア */}
       <div className="relative h-screen flex overflow-y-auto z-10">
         {/* 済エリア */}
         <div className="w-2/5 relative p-6 flex flex-col items-center">
@@ -137,7 +153,7 @@ export default function OrderBoard() {
         </div>
       </div>
 
-      {/* 🗑 ゴミ箱（常に固定表示） */}
+      {/* ゴミ箱 */}
       <div
         ref={trashRef}
         className="fixed bottom-6 left-[20%] flex justify-center items-center z-20"
