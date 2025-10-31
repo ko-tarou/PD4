@@ -13,15 +13,14 @@ export default function OrderBoard() {
     { id: 1, label: '○（卓番）：呼び出し', color: 'red' },
     { id: 2, label: '○（卓番）：はし', color: 'gray' },
     { id: 3, label: '○（卓番）：取り皿', color: 'gray' },
-    { id: 7, label: '○（卓番）：水', color: 'gray' },
-    { id: 8, label: '○（卓番）：箸', color: 'gray' },
-    { id: 9, label: '○（卓番）：皿', color: 'gray' },
-    { id: 10, label: '○（卓番）：醤油', color: 'gray' },
+    { id: 4, label: '○（卓番）：水', color: 'gray' },
+    { id: 5, label: '○（卓番）：皿', color: 'gray' },
+    { id: 6, label: '○（卓番）：醤油', color: 'gray' },
   ]);
   const [pending, setPending] = useState<Item[]>([
-    { id: 4, label: '○（卓番）：呼び出し', color: 'red' },
-    { id: 5, label: '○（卓番）：ドリンク', color: 'blue' },
-    { id: 6, label: '○（卓番）：おしぼり', color: 'gray' },
+    { id: 7, label: '○（卓番）：呼び出し', color: 'red' },
+    { id: 8, label: '○（卓番）：ドリンク', color: 'blue' },
+    { id: 9, label: '○（卓番）：おしぼり', color: 'gray' },
   ]);
 
   const onDragStart = (e: React.DragEvent, item: Item, from: 'done' | 'pending') => {
@@ -45,13 +44,13 @@ export default function OrderBoard() {
   return (
     <>
       {/* 背景固定 */}
-      <div className="fixed inset-0 flex">
+      <div className="fixed inset-0 flex z-0">
         <div className="w-2/5" style={{ backgroundColor: '#FFD5D5' }}></div>
         <div className="flex-1" style={{ backgroundColor: '#FFFAE2' }}></div>
       </div>
 
-      {/* コンテンツ部分（スクロール可能） */}
-      <div className="relative h-screen flex overflow-y-auto">
+      {/* メインエリア（スクロール可能） */}
+      <div className="relative h-screen flex overflow-y-auto z-10">
         {/* 済エリア */}
         <div
           className="w-2/5 p-6 flex flex-col items-center overflow-y-auto"
@@ -60,7 +59,8 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">済</h1>
           <p className="mb-4">ドラッグ＆ドロップ</p>
-          <div className="flex flex-col gap-4">
+
+          <div className="flex flex-col gap-4 pb-20">
             {done.map((item) => (
               <button
                 key={item.id}
@@ -78,9 +78,6 @@ export default function OrderBoard() {
               </button>
             ))}
           </div>
-          <div className="mt-10 text-5xl">
-            <Trash2 size={48} />
-          </div>
         </div>
 
         {/* 未エリア */}
@@ -90,7 +87,7 @@ export default function OrderBoard() {
           onDrop={(e) => onDrop(e, 'pending')}
         >
           <h1 className="text-4xl mb-6">未</h1>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pb-20">
             {pending.map((item) => (
               <button
                 key={item.id}
@@ -108,6 +105,13 @@ export default function OrderBoard() {
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* 🗑 ゴミ箱（常に固定表示） */}
+      <div className="fixed bottom-6 left-[20%] flex justify-center items-center z-20">
+        <div className="bg-white rounded-full shadow-lg p-4 border">
+          <Trash2 size={56} className="text-gray-700" />
         </div>
       </div>
     </>
