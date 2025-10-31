@@ -39,15 +39,11 @@ export default function OrderBoard() {
   };
 
   return (
-    <div
-      className="h-screen flex"
-      style={{
-        background: `linear-gradient(to right, #FFD5D5 40%, #FFFAE2 60%)`,
-      }}
-    >
+    <div className="h-screen flex">
       {/* 済エリア */}
       <div
         className="w-2/5 p-6 flex flex-col items-center"
+        style={{ backgroundColor: '#FFD5D5' }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => onDrop(e, 'done')}
       >
@@ -79,6 +75,7 @@ export default function OrderBoard() {
       {/* 未エリア */}
       <div
         className="flex-1 p-6 flex flex-col items-center"
+        style={{ backgroundColor: '#FFFAE2' }}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => onDrop(e, 'pending')}
       >
