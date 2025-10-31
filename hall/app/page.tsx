@@ -34,15 +34,18 @@ export default function OrderBoard() {
     const pendingCenterY = screenHeight / 2 - itemHeight / 2;
 
     setDone([
-      { id: 1, label: '呼び出し', color: 'red', x: doneCenterX, y: doneCenterY },
-      { id: 2, label: 'はし', color: 'gray', x: doneCenterX, y: doneCenterY + 60 },
-      { id: 3, label: '取り皿', color: 'gray', x: doneCenterX, y: doneCenterY + 120 },
+      { id: 1, label: '〇（卓番）：呼び出し', color: 'red', x: 50, y: 50 },
+      { id: 2, label: '〇（卓番）：〇（個数）はし', color: 'gray', x: 50, y: 120 },
+      { id: 3, label: '〇（卓番）：〇（個数）取り皿', color: 'gray', x: 50, y: 190 },
+      { id: 4, label: '〇（卓番）：〇（個数）水', color: 'blue', x: 50, y: 260 },
+      { id: 5, label: '〇（卓番）：皿', color: 'gray', x: 50, y: 330 },
+      { id: 6, label: '〇（卓番）：醤油', color: 'gray', x: 50, y: 400 },
     ]);
 
     setPending([
-      { id: 4, label: '呼び出し', color: 'red', x: pendingCenterX, y: pendingCenterY },
-      { id: 5, label: 'ドリンク', color: 'blue', x: pendingCenterX, y: pendingCenterY + 60 },
-      { id: 6, label: 'おしぼり', color: 'gray', x: pendingCenterX, y: pendingCenterY + 120 },
+      { id: 7, label: '○（卓番）：呼び出し', color: 'red', x: 400, y: 50 },
+      { id: 8, label: '○（卓番）：ドリンク', color: 'blue', x: 400, y: 120 },
+      { id: 9, label: '○（卓番）：おしぼり', color: 'gray', x: 400, y: 190 },
     ]);
   }, []);
 
