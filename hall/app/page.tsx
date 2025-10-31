@@ -10,20 +10,6 @@ type Item = {
 
 export default function OrderBoard() {
   const [done, setDone] = useState<Item[]>([
-    { id: 1, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 2, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 3, label: '〇（卓番）：〇（個数）お冷', color: 'blue' },
-    { id: 4, label: '〇（卓番）：〇（個数）はし', color: 'gray' },
-    { id: 5, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 6, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 7, label: '〇（卓番）：〇（個数）調味料', color: 'gray' },
-    { id: 8, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 9, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 10, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 11, label: '〇（卓番）：〇（個数）ドリンク', color: 'blue' },
-    { id: 12, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 13, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 14, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
   ]);
   const [pending, setPending] = useState<Item[]>([
     { id: 1, label: '〇（卓番）：呼び出し', color: 'red' },
