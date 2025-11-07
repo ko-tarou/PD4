@@ -8,9 +8,15 @@ type Item = {
   color: string;
 };
 
+// 色順を定義（赤→青→グレー）
+const colorOrder: Record<string, number> = {
+  red: 1,
+  blue: 2,
+  gray: 3,
+};
+
 export default function OrderBoard() {
-  const [done, setDone] = useState<Item[]>([
-  ]);
+  const [done, setDone] = useState<Item[]>([]);
   const [pending, setPending] = useState<Item[]>([
     { id: 1, label: '〇（卓番）：呼び出し', color: 'red' },
     { id: 2, label: '〇（卓番）：呼び出し', color: 'red' },
@@ -46,6 +52,21 @@ export default function OrderBoard() {
     }
   };
 
+  // 🗑 済エリアの削除処理
+  const clearDone = () => {
+    if (done.length === 0) return;
+    if (confirm('済エリアの項目をすべて削除しますか？')) {
+      setDone([]);
+    }
+  };
+
+  // 🧩 色順ソート関数
+  const sortByColor = (items: Item[]) => {
+    return [...items].sort(
+      (a, b) => (colorOrder[a.color] ?? 99) - (colorOrder[b.color] ?? 99)
+    );
+  };
+
   return (
     <>
       {/* 背景固定 */}
@@ -63,9 +84,8 @@ export default function OrderBoard() {
           onDrop={(e) => onDrop(e, 'done')}
         >
           <h1 className="text-4xl mb-6">済</h1>
-
           <div className="flex flex-col gap-4 pb-20">
-            {done.map((item) => (
+            {sortByColor(done).map((item) => (
               <button
                 key={item.id}
                 draggable
@@ -92,7 +112,7 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">未</h1>
           <div className="flex flex-col gap-4 pb-20">
-            {pending.map((item) => (
+            {sortByColor(pending).map((item) => (
               <button
                 key={item.id}
                 draggable
@@ -114,9 +134,13 @@ export default function OrderBoard() {
 
       {/* 🗑 ゴミ箱（常に固定表示） */}
       <div className="fixed bottom-6 left-[20%] flex justify-center items-center z-20">
-        <div className="bg-white rounded-full shadow-lg p-4 border">
+        <button
+          onClick={clearDone}
+          className="bg-white rounded-full shadow-lg p-4 border hover:bg-gray-100 transition"
+          title="済エリアを全削除"
+        >
           <Trash2 size={56} className="text-gray-700" />
-        </div>
+        </button>
       </div>
     </>
   );
