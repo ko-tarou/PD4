@@ -185,9 +185,14 @@ const OrderManagement: React.FC = () => {
   };
 
   const [draggedOrder, setDraggedOrder] = useState<number | null>(null);
+  const [draggedCompletedOrder, setDraggedCompletedOrder] = useState<number | null>(null);
 
   const handleDragStart = (orderId: number) => {
     setDraggedOrder(orderId);
+  };
+
+  const handleCompletedDragStart = (orderId: number) => {
+    setDraggedCompletedOrder(orderId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -199,6 +204,26 @@ const OrderManagement: React.FC = () => {
     if (draggedOrder !== null) {
       handleCompleteOrder(draggedOrder);
       setDraggedOrder(null);
+    }
+  };
+
+  const handleCategoryDrop = (e: React.DragEvent, category: string) => {
+    e.preventDefault();
+    if (draggedCompletedOrder !== null) {
+      const completedOrder = completedOrders.find(o => o.id === draggedCompletedOrder);
+      if (completedOrder) {
+        const restoredOrder: Order = {
+          id: completedOrder.id,
+          category: category,
+          name: completedOrder.name,
+          table: completedOrder.table,
+          quantity: completedOrder.quantity,
+          time: completedOrder.time
+        };
+        setOrders([restoredOrder, ...orders]);
+        setCompletedOrders(completedOrders.filter(o => o.id !== draggedCompletedOrder));
+      }
+      setDraggedCompletedOrder(null);
     }
   };
 
@@ -375,7 +400,12 @@ const OrderManagement: React.FC = () => {
         </div>
 
         <div className="flex" style={{ height: '470px' }}>
-          <div className="p-3 space-y-2 overflow-y-auto" style={{ width: '280px', backgroundColor: '#DA7700' }}>
+          <div 
+            className="p-3 space-y-2 overflow-y-auto" 
+            style={{ width: '280px', backgroundColor: '#DA7700' }}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleCategoryDrop(e, '揚げ')}
+          >
             {orders
               .filter(order => order.category === '揚げ')
               .map((order) => (
@@ -397,7 +427,12 @@ const OrderManagement: React.FC = () => {
               ))}
           </div>
 
-          <div className="p-3 space-y-2 overflow-y-auto" style={{ width: '280px', backgroundColor: '#B18869' }}>
+          <div 
+            className="p-3 space-y-2 overflow-y-auto" 
+            style={{ width: '280px', backgroundColor: '#B18869' }}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleCategoryDrop(e, '焼き')}
+          >
             {orders
               .filter(order => order.category === '焼き')
               .map((order) => (
@@ -419,7 +454,12 @@ const OrderManagement: React.FC = () => {
               ))}
           </div>
 
-          <div className="p-3 space-y-2 overflow-y-auto" style={{ width: '280px', backgroundColor: '#EEF7AC' }}>
+          <div 
+            className="p-3 space-y-2 overflow-y-auto" 
+            style={{ width: '280px', backgroundColor: '#EEF7AC' }}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleCategoryDrop(e, '一品')}
+          >
             {orders
               .filter(order => order.category === '一品')
               .map((order) => (
@@ -454,7 +494,12 @@ const OrderManagement: React.FC = () => {
         >
           <div className="flex-1 flex gap-2 overflow-x-auto" style={{ maxHeight: '100px' }}>
             {completedOrders.map((order) => (
-              <div key={order.id} className="bg-orange-100 border-2 border-orange-300 rounded-lg p-2 flex-shrink-0">
+              <div 
+                key={order.id} 
+                draggable
+                onDragStart={() => handleCompletedDragStart(order.id)}
+                className="bg-orange-100 border-2 border-orange-300 rounded-lg p-2 flex-shrink-0 cursor-move"
+              >
                 <div className="font-bold text-sm">{order.name}</div>
                 <div className="text-xs flex items-center gap-1">
                   <input type="radio" className="w-2 h-2" checked readOnly />
