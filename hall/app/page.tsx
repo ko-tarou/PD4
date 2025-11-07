@@ -8,31 +8,55 @@ type Item = {
   color: string;
 };
 
-// 色順を定義（赤→青→グレー）
-const colorOrder: Record<string, number> = {
-  red: 1,
-  blue: 2,
-  gray: 3,
+// ラベルの内容から色を自動判定する関数
+const getColorFromLabel = (label: string): string => {
+  const lower = label.toLowerCase();
+
+  // 呼び出し（赤）
+  if (label.includes('呼び出し')) return 'red';
+
+  // 飲み物キーワード
+  const drinkKeywords = [
+    'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
+    'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
+    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー',
+    'beer', 'cola', 'coffee', 'tea', 'highball'
+  ];
+
+  if (drinkKeywords.some((word) => label.includes(word) || lower.includes(word))) {
+    return 'blue';
+  }
+
+  // それ以外（グレー）
+  return 'gray';
+};
+
+// 色の優先順位でソート（赤 → 青 → グレー）
+const sortByColor = (items: Item[]) => {
+  const colorOrder: Record<string, number> = { red: 1, blue: 2, gray: 3 };
+  return [...items].sort((a, b) => colorOrder[a.color] - colorOrder[b.color]);
 };
 
 export default function OrderBoard() {
-  const [done, setDone] = useState<Item[]>([]);
+  // 初期データ（ここでのみ注文を定義）
   const [pending, setPending] = useState<Item[]>([
-    { id: 1, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 2, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 3, label: '〇（卓番）：呼び出し', color: 'red' },
-    { id: 4, label: '〇（卓番）：〇（個数）ドリンク', color: 'blue' },
-    { id: 5, label: '〇（卓番）：〇（個数）お冷', color: 'blue' },
-    { id: 6, label: '〇（卓番）：〇（個数）はし', color: 'gray' },
-    { id: 7, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 8, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 9, label: '〇（卓番）：〇（個数）調味料', color: 'gray' },
-    { id: 10, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 11, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 12, label: '〇（卓番）：〇（個数）おしぼり', color: 'gray' },
-    { id: 13, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
-    { id: 14, label: '〇（卓番）：〇（個数）取り皿', color: 'gray' },
+    { id: 1, label: '1番卓：呼び出し', color: getColorFromLabel('1番卓：呼び出し') },
+    { id: 2, label: '2番卓：生ビール2つ', color: getColorFromLabel('2番卓：生ビール2つ') },
+    { id: 3, label: '3番卓：ウーロン茶1杯', color: getColorFromLabel('3番卓：ウーロン茶1杯') },
+    { id: 4, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
+    { id: 5, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 6, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 7, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 8, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 9, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 10, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 11, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 12, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 13, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
+    { id: 14, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
   ]);
+
+  const [done, setDone] = useState<Item[]>([]);
 
   const onDragStart = (e: React.DragEvent, item: Item, from: 'done' | 'pending') => {
     e.dataTransfer.setData('item', JSON.stringify({ item, from }));
@@ -44,27 +68,19 @@ export default function OrderBoard() {
     if (data.from === to) return;
 
     if (to === 'done') {
-      setDone([...done, data.item]);
+      setDone(sortByColor([...done, data.item]));
       setPending(pending.filter((i) => i.id !== data.item.id));
     } else {
-      setPending([...pending, data.item]);
+      setPending(sortByColor([...pending, data.item]));
       setDone(done.filter((i) => i.id !== data.item.id));
     }
   };
 
-  // 🗑 済エリアの削除処理
   const clearDone = () => {
     if (done.length === 0) return;
     if (confirm('済エリアの項目をすべて削除しますか？')) {
       setDone([]);
     }
-  };
-
-  // 🧩 色順ソート関数
-  const sortByColor = (items: Item[]) => {
-    return [...items].sort(
-      (a, b) => (colorOrder[a.color] ?? 99) - (colorOrder[b.color] ?? 99)
-    );
   };
 
   return (
@@ -75,7 +91,7 @@ export default function OrderBoard() {
         <div className="flex-1" style={{ backgroundColor: '#FFFAE2' }}></div>
       </div>
 
-      {/* メインエリア（スクロール可能） */}
+      {/* メインエリア */}
       <div className="relative h-screen flex overflow-y-auto z-10">
         {/* 済エリア */}
         <div
@@ -132,7 +148,7 @@ export default function OrderBoard() {
         </div>
       </div>
 
-      {/* 🗑 ゴミ箱（常に固定表示） */}
+      {/* ゴミ箱 */}
       <div className="fixed bottom-6 left-[20%] flex justify-center items-center z-20">
         <button
           onClick={clearDone}
