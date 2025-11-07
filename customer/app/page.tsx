@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function Sample1() {
 const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
@@ -77,20 +77,26 @@ const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
 
       {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
-        {tabItems[activeTab].map((item) => (
-          <div
-            key={item}
-            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
-          >
-            <p className="text-gray-700 text-sm">{item}</p>
-            <button
-              onClick={() => addItemToCart(item)}
-              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+        {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
+          tabItems[activeTab].map((item) => (
+            <div
+              key={item}
+              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
             >
-              追加
-            </button>
+              <p className="text-gray-700 text-sm">{item}</p>
+              <button
+                onClick={() => addItemToCart(item)}
+                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+              >
+                追加
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12 text-gray-500">
+            <p>メニューを読み込み中...</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* ✅ 注文確認モーダル */}
@@ -179,10 +185,7 @@ const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
           )}
         </button>
 
-        <button
-          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
-          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
-        >
+        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
           注文
         </button>
       </div>
@@ -264,20 +267,26 @@ export function Sample2() {
 
       {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
-        {tabItems[activeTab].map((item) => (
-          <div
-            key={item}
-            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
-          >
-            <p className="text-gray-700 text-sm">{item}</p>
-            <button
-              onClick={() => addItemToCart(item)}
-              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+        {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
+          tabItems[activeTab].map((item) => (
+            <div
+              key={item}
+              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
             >
-              追加
-            </button>
+              <p className="text-gray-700 text-sm">{item}</p>
+              <button
+                onClick={() => addItemToCart(item)}
+                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+              >
+                追加
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12 text-gray-500">
+            <p>メニューを読み込み中...</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* ✅ 注文確認モーダル */}
@@ -366,25 +375,24 @@ export function Sample2() {
           )}
         </button>
 
-        <button
-          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
-          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
-        >
+        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
           注文
         </button>
       </div>
     </div>
   );
 }
-
 export default function Sample3() {
-  const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
-  const [activeTab, setActiveTab] = useState("おすすめ");
+  const [tabs, setTabs] = useState<MenuTab[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [tabItems, setTabItems] = useState<Record<string, string[]>>({});
+  const [activeTab, setActiveTab] = useState<string>("");
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
+  const [isOrdering, setIsOrdering] = useState(false);
 
   // アクセシビリティ設定
   const [volume, setVolume] = useState(50);
@@ -394,11 +402,107 @@ export default function Sample3() {
   const addItemToCart = (item: string) => setCartItems((prev) => [...prev, item]);
   const clearCart = () => setCartItems([]);
 
-  const tabItems: Record<string, string[]> = {
-    おすすめ: ["ラーメン", "唐揚げ", "ポテト"],
-    おつまみ: ["ラーメン", "キムチ", "餃子"],
-    揚げ物: ["唐揚げ", "とんかつ", "エビフライ"],
-    飲み物: ["ビール", "コーラ", "ウーロン茶"],
+  // バックエンドからメニューを取得
+  useEffect(() => {
+    const fetchMenu = async () => {
+      try {
+        // タブを取得
+        const tabsResponse = await fetch("http://localhost:3001/api/menu/tabs");
+        let tabsData: MenuTab[] = [];
+        if (tabsResponse.ok) {
+          tabsData = await tabsResponse.json();
+          setTabs(tabsData);
+        } else {
+          console.error("タブの取得に失敗しました:", tabsResponse.status);
+          return;
+        }
+
+        // メニューアイテムを取得
+        const itemsResponse = await fetch("http://localhost:3001/api/menu/items");
+        if (itemsResponse.ok) {
+          const itemsData = await itemsResponse.json();
+          setMenuItems(itemsData);
+
+          // タブごとにメニューアイテムをグループ化
+          const grouped: Record<string, string[]> = {};
+          tabsData.forEach((tab: MenuTab) => {
+            grouped[tab.name] = itemsData
+              .filter((item: MenuItem) => item.tabId === tab.id)
+              .map((item: MenuItem) => item.name);
+          });
+          setTabItems(grouped);
+          
+          // グループ化後にactiveTabを設定（初回のみ）
+          if (tabsData.length > 0 && activeTab === "") {
+            setActiveTab(tabsData[0].name);
+          }
+        } else {
+          console.error("メニューアイテムの取得に失敗しました:", itemsResponse.status);
+        }
+      } catch (error) {
+        console.error("メニューの取得に失敗しました:", error);
+      }
+    };
+
+    fetchMenu();
+    // 定期的に更新（5秒ごと）
+    const interval = setInterval(fetchMenu, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 注文を送信する関数
+  const handleOrder = async () => {
+    if (cartItems.length === 0) {
+      alert("カートが空です");
+      return;
+    }
+
+    setIsOrdering(true);
+    try {
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      // カート内の各アイテムを注文として送信
+      const orderPromises = cartItems.map(async (item) => {
+        // メニューアイテムからカテゴリを取得
+        const menuItem = menuItems.find((mi) => mi.name === item);
+        const category = menuItem ? menuItem.category : "一品"; // デフォルト
+
+        const response = await fetch("http://localhost:3001/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            category,
+            name: item,
+            table: "1", // 仮の卓番、後で実装
+            quantity: "1",
+            time: timeStr,
+          }),
+        }).catch((fetchError) => {
+          console.error("ネットワークエラー:", fetchError);
+          throw new Error("バックエンドサーバーに接続できません。サーバーが起動しているか確認してください。");
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => "不明なエラー");
+          throw new Error(`注文の送信に失敗しました: ${errorText}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(orderPromises);
+      alert("注文が送信されました！");
+      clearCart();
+      setCartOpen(false);
+    } catch (error) {
+      console.error("注文エラー:", error);
+      alert("注文の送信に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsOrdering(false);
+    }
   };
 
   // ✅ 商品名ごとに数量を集計
@@ -412,61 +516,53 @@ export default function Sample3() {
       className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
       style={{ fontSize: `${fontSize}px` }}
     >
-      {/* 🔳 黒背景付きタブバー */}
-      <div className="w-full bg-black flex flex-col items-center">
-        <div className="flex items-center justify-between w-full px-6 py-3 relative">
-          <div className="flex space-x-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
-                  activeTab === tab
-                    ? "bg-orange-400 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex items-center space-x-3">
-            {/* ✅ お支払いボタン */}
+      {/* タブメニュー */}
+      <div className="flex items-center justify-between bg-gray-100 px-6 py-3 shadow-sm w-full">
+        <div className="flex space-x-2">
+          {tabs.map((tab) => (
             <button
-              onClick={() => setPaymentOpen(true)}
-              className="text-black bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100"
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
+                activeTab === tab
+                  ? "bg-orange-400 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-200"
+              }`}
             >
-              お支払い
+              {tab}
             </button>
-
-            {/* ⚙️ 設定ボタン */}
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="text-white hover:text-gray-300 text-3xl"
-            >
-              ⚙️
-            </button>
-          </div>
+          ))}
         </div>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="text-gray-600 hover:text-gray-800 text-3xl"
+        >
+          ⚙️
+        </button>
       </div>
 
       {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
-        {tabItems[activeTab].map((item) => (
-          <div
-            key={item}
-            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
-          >
-            <p className="text-gray-700 text-sm">{item}</p>
-            <button
-              onClick={() => addItemToCart(item)}
-              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+        {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
+          tabItems[activeTab].map((item) => (
+            <div
+              key={item}
+              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
             >
-              追加
-            </button>
+              <p className="text-gray-700 text-sm">{item}</p>
+              <button
+                onClick={() => addItemToCart(item)}
+                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+              >
+                追加
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-12 text-gray-500">
+            <p>メニューを読み込み中...</p>
           </div>
-        ))}
+        )}
       </div>
 
       {/* ✅ 注文確認モーダル */}
@@ -555,10 +651,7 @@ export default function Sample3() {
           )}
         </button>
 
-        <button
-          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
-          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
-        >
+        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
           注文
         </button>
       </div>

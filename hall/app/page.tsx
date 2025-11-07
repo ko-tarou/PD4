@@ -1,103 +1,264 @@
-import Image from "next/image";
+'use client';
+import { useState, useEffect } from 'react';
+import { Trash2 } from 'lucide-react';
 
-export default function Home() {
+type Item = {
+  id: number;
+  label: string;
+  color: string;
+};
+
+interface Order {
+  id: number;
+  category: string;
+  name: string;
+  table: string;
+  quantity: string;
+  time: string;
+}
+
+interface MenuItem {
+  id: number;
+  tabId: number;
+  name: string;
+  price: number;
+  category: string;
+}
+
+// 注文から色を自動判定する関数
+const getColorFromOrder = (order: Order, menuItems: MenuItem[]): string => {
+  // 呼び出し（赤）
+  if (order.name.includes('呼び出し')) return 'red';
+
+  // メニューアイテムが読み込まれていない場合はキーワード判定のみ
+  if (!menuItems || menuItems.length === 0) {
+    const drinkKeywords = [
+      'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
+      'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
+      'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
+    ];
+    const orderNameLower = order.name.toLowerCase();
+    if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
+      return 'blue';
+    }
+    return 'gray';
+  }
+
+  // バックエンドのメニューアイテムから飲み物を判定
+  const menuItem = menuItems.find(item => item.name === order.name);
+  
+  // 飲み物タブ（tabId: 4）のアイテムは青
+  if (menuItem && menuItem.tabId === 4) {
+    return 'blue';
+  }
+
+  // 飲み物キーワードを含む場合も青
+  const drinkKeywords = [
+    'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
+    'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
+    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
+  ];
+  
+  const orderNameLower = order.name.toLowerCase();
+  if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
+    return 'blue';
+  }
+
+  // それ以外（グレー）
+  return 'gray';
+};
+
+// 色の優先順位でソート（赤 → 青 → グレー）
+const sortByColor = (items: Item[]) => {
+  const colorOrder: Record<string, number> = { red: 1, blue: 2, gray: 3 };
+  return [...items].sort((a, b) => colorOrder[a.color] - colorOrder[b.color]);
+};
+
+export default function OrderBoard() {
+  const [pending, setPending] = useState<Item[]>([]);
+  const [done, setDone] = useState<Item[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [doneOrderIds, setDoneOrderIds] = useState<Set<number>>(new Set());
+
+  // バックエンドからメニューアイテムを取得
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/menu/items');
+        if (response.ok) {
+          const data = await response.json();
+          setMenuItems(data);
+        }
+      } catch (error) {
+        console.error('メニューアイテムの取得に失敗しました:', error);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  // バックエンドから注文を取得してhall用のアイテムに変換
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/orders');
+        if (response.ok) {
+          const orders: Order[] = await response.json();
+          
+          // 注文をhall用のアイテムに変換（doneに移動した注文は除外）
+          const items: Item[] = orders
+            .filter((order) => !doneOrderIds.has(order.id)) // doneに移動した注文を除外
+            .map((order) => {
+              // テーブル番号を抽出（"1番" または "1" から "1" を取得）
+              const tableMatch = order.table.match(/(\d+)/);
+              const tableNum = tableMatch ? tableMatch[1] : order.table;
+              
+              // 数量を抽出
+              const quantityMatch = order.quantity.match(/(\d+)/);
+              const quantity = quantityMatch ? quantityMatch[1] : '1';
+              
+              // ラベルを生成
+              let label = '';
+              if (order.name.includes('呼び出し')) {
+                label = `${tableNum}番卓：呼び出し`;
+              } else {
+                // メニューアイテム名を使用
+                const unit = (menuItems && menuItems.length > 0 && menuItems.find(mi => mi.name === order.name && mi.tabId === 4))
+                  ? '杯' 
+                  : '個';
+                label = `${tableNum}番卓：${order.name}${quantity}${unit}`;
+              }
+              
+              return {
+                id: order.id,
+                label,
+                color: getColorFromOrder(order, menuItems || []),
+              };
+            });
+          
+          setPending(items);
+        }
+      } catch (error) {
+        console.error('注文の取得に失敗しました:', error);
+      }
+    };
+
+    // 初回実行（menuItemsが空でも実行）
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 2000); // 2秒ごとに更新
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuItems.length, doneOrderIds.size]); // menuItemsの長さとdoneOrderIdsが変わったとき再実行
+
+  const onDragStart = (e: React.DragEvent, item: Item, from: 'done' | 'pending') => {
+    e.dataTransfer.setData('item', JSON.stringify({ item, from }));
+  };
+
+  const onDrop = (e: React.DragEvent, to: 'done' | 'pending') => {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('item'));
+    if (data.from === to) return;
+
+    if (to === 'done') {
+      setDone(sortByColor([...done, data.item]));
+      setPending(pending.filter((i) => i.id !== data.item.id));
+      // doneに移動した注文IDを記録
+      setDoneOrderIds((prev) => new Set([...prev, data.item.id]));
+    } else {
+      setPending(sortByColor([...pending, data.item]));
+      setDone(done.filter((i) => i.id !== data.item.id));
+      // pendingに戻した注文IDを記録から削除
+      setDoneOrderIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(data.item.id);
+        return newSet;
+      });
+    }
+  };
+
+  const clearDone = () => {
+    if (done.length === 0) return;
+    if (confirm('済エリアの項目をすべて削除しますか？')) {
+      setDone([]);
+      setDoneOrderIds(new Set()); // doneOrderIdsもクリア
+    }
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <>
+      {/* 背景固定 */}
+      <div className="fixed inset-0 flex z-0">
+        <div className="w-2/5" style={{ backgroundColor: '#FFD5D5' }}></div>
+        <div className="flex-1" style={{ backgroundColor: '#FFFAE2' }}></div>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* メインエリア */}
+      <div className="relative h-screen flex overflow-y-auto z-10">
+        {/* 済エリア */}
+        <div
+          className="w-2/5 p-6 flex flex-col items-center overflow-y-auto"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => onDrop(e, 'done')}
+        >
+          <h1 className="text-4xl mb-6">済</h1>
+          <div className="flex flex-col gap-4 pb-20">
+            {sortByColor(done).map((item, index) => (
+              <button
+                key={`done-${item.id}-${index}`}
+                draggable
+                onDragStart={(e) => onDragStart(e, item, 'done')}
+                className={`px-4 py-2 rounded border shadow ${
+                  item.color === 'red'
+                    ? 'bg-red-500 text-white'
+                    : item.color === 'blue'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* 未エリア */}
+        <div
+          className="flex-1 p-6 flex flex-col items-center overflow-y-auto"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => onDrop(e, 'pending')}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+          <h1 className="text-4xl mb-6">未</h1>
+          <div className="flex flex-col gap-4 pb-20">
+            {sortByColor(pending).map((item, index) => (
+              <button
+                key={`pending-${item.id}-${index}`}
+                draggable
+                onDragStart={(e) => onDragStart(e, item, 'pending')}
+                className={`px-4 py-2 rounded border shadow ${
+                  item.color === 'red'
+                    ? 'bg-red-500 text-white'
+                    : item.color === 'blue'
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-gray-200'
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ゴミ箱 */}
+      <div className="fixed bottom-6 left-[20%] flex justify-center items-center z-20">
+        <button
+          onClick={clearDone}
+          className="bg-white rounded-full shadow-lg p-4 border hover:bg-gray-100 transition"
+          title="済エリアを全削除"
         >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <Trash2 size={56} className="text-gray-700" />
+        </button>
+      </div>
+    </>
   );
 }
