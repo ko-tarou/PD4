@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 
 type Item = {
@@ -8,22 +8,59 @@ type Item = {
   color: string;
 };
 
-// ラベルの内容から色を自動判定する関数
-const getColorFromLabel = (label: string): string => {
-  const lower = label.toLowerCase();
+interface Order {
+  id: number;
+  category: string;
+  name: string;
+  table: string;
+  quantity: string;
+  time: string;
+}
 
+interface MenuItem {
+  id: number;
+  tabId: number;
+  name: string;
+  price: number;
+  category: string;
+}
+
+// 注文から色を自動判定する関数
+const getColorFromOrder = (order: Order, menuItems: MenuItem[]): string => {
   // 呼び出し（赤）
-  if (label.includes('呼び出し')) return 'red';
+  if (order.name.includes('呼び出し')) return 'red';
 
-  // 飲み物キーワード
+  // メニューアイテムが読み込まれていない場合はキーワード判定のみ
+  if (!menuItems || menuItems.length === 0) {
+    const drinkKeywords = [
+      'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
+      'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
+      'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
+    ];
+    const orderNameLower = order.name.toLowerCase();
+    if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
+      return 'blue';
+    }
+    return 'gray';
+  }
+
+  // バックエンドのメニューアイテムから飲み物を判定
+  const menuItem = menuItems.find(item => item.name === order.name);
+  
+  // 飲み物タブ（tabId: 4）のアイテムは青
+  if (menuItem && menuItem.tabId === 4) {
+    return 'blue';
+  }
+
+  // 飲み物キーワードを含む場合も青
   const drinkKeywords = [
     'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
     'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
-    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー',
-    'beer', 'cola', 'coffee', 'tea', 'highball'
+    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
   ];
-
-  if (drinkKeywords.some((word) => label.includes(word) || lower.includes(word))) {
+  
+  const orderNameLower = order.name.toLowerCase();
+  if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
     return 'blue';
   }
 
@@ -38,25 +75,80 @@ const sortByColor = (items: Item[]) => {
 };
 
 export default function OrderBoard() {
-  // 初期データ（ここでのみ注文を定義）
-  const [pending, setPending] = useState<Item[]>([
-    { id: 1, label: '1番卓：呼び出し', color: getColorFromLabel('1番卓：呼び出し') },
-    { id: 2, label: '2番卓：生ビール2つ', color: getColorFromLabel('2番卓：生ビール2つ') },
-    { id: 3, label: '3番卓：ウーロン茶1杯', color: getColorFromLabel('3番卓：ウーロン茶1杯') },
-    { id: 4, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 5, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 6, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 7, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 8, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 9, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 10, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 11, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 12, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 13, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 14, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-  ]);
-
+  const [pending, setPending] = useState<Item[]>([]);
   const [done, setDone] = useState<Item[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [doneOrderIds, setDoneOrderIds] = useState<Set<number>>(new Set());
+
+  // バックエンドからメニューアイテムを取得
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/menu/items');
+        if (response.ok) {
+          const data = await response.json();
+          setMenuItems(data);
+        }
+      } catch (error) {
+        console.error('メニューアイテムの取得に失敗しました:', error);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  // バックエンドから注文を取得してhall用のアイテムに変換
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/orders');
+        if (response.ok) {
+          const orders: Order[] = await response.json();
+          
+          // 注文をhall用のアイテムに変換（doneに移動した注文は除外）
+          const items: Item[] = orders
+            .filter((order) => !doneOrderIds.has(order.id)) // doneに移動した注文を除外
+            .map((order) => {
+              // テーブル番号を抽出（"1番" または "1" から "1" を取得）
+              const tableMatch = order.table.match(/(\d+)/);
+              const tableNum = tableMatch ? tableMatch[1] : order.table;
+              
+              // 数量を抽出
+              const quantityMatch = order.quantity.match(/(\d+)/);
+              const quantity = quantityMatch ? quantityMatch[1] : '1';
+              
+              // ラベルを生成
+              let label = '';
+              if (order.name.includes('呼び出し')) {
+                label = `${tableNum}番卓：呼び出し`;
+              } else {
+                // メニューアイテム名を使用
+                const unit = (menuItems && menuItems.length > 0 && menuItems.find(mi => mi.name === order.name && mi.tabId === 4))
+                  ? '杯' 
+                  : '個';
+                label = `${tableNum}番卓：${order.name}${quantity}${unit}`;
+              }
+              
+              return {
+                id: order.id,
+                label,
+                color: getColorFromOrder(order, menuItems || []),
+              };
+            });
+          
+          setPending(items);
+        }
+      } catch (error) {
+        console.error('注文の取得に失敗しました:', error);
+      }
+    };
+
+    // 初回実行（menuItemsが空でも実行）
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 2000); // 2秒ごとに更新
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [menuItems.length, doneOrderIds.size]); // menuItemsの長さとdoneOrderIdsが変わったとき再実行
 
   const onDragStart = (e: React.DragEvent, item: Item, from: 'done' | 'pending') => {
     e.dataTransfer.setData('item', JSON.stringify({ item, from }));
@@ -70,9 +162,17 @@ export default function OrderBoard() {
     if (to === 'done') {
       setDone(sortByColor([...done, data.item]));
       setPending(pending.filter((i) => i.id !== data.item.id));
+      // doneに移動した注文IDを記録
+      setDoneOrderIds((prev) => new Set([...prev, data.item.id]));
     } else {
       setPending(sortByColor([...pending, data.item]));
       setDone(done.filter((i) => i.id !== data.item.id));
+      // pendingに戻した注文IDを記録から削除
+      setDoneOrderIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(data.item.id);
+        return newSet;
+      });
     }
   };
 
@@ -80,6 +180,7 @@ export default function OrderBoard() {
     if (done.length === 0) return;
     if (confirm('済エリアの項目をすべて削除しますか？')) {
       setDone([]);
+      setDoneOrderIds(new Set()); // doneOrderIdsもクリア
     }
   };
 
@@ -101,9 +202,9 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">済</h1>
           <div className="flex flex-col gap-4 pb-20">
-            {sortByColor(done).map((item) => (
+            {sortByColor(done).map((item, index) => (
               <button
-                key={item.id}
+                key={`done-${item.id}-${index}`}
                 draggable
                 onDragStart={(e) => onDragStart(e, item, 'done')}
                 className={`px-4 py-2 rounded border shadow ${
@@ -128,9 +229,9 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">未</h1>
           <div className="flex flex-col gap-4 pb-20">
-            {sortByColor(pending).map((item) => (
+            {sortByColor(pending).map((item, index) => (
               <button
-                key={item.id}
+                key={`pending-${item.id}-${index}`}
                 draggable
                 onDragStart={(e) => onDragStart(e, item, 'pending')}
                 className={`px-4 py-2 rounded border shadow ${

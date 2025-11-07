@@ -72,30 +72,29 @@ const OrderManagement: React.FC = () => {
     { id: 3, name: '一品', color: '#5C6327', bgColor: '#EEF7AC' }
   ];
 
-  // バックエンドから注文を取得する関数
-  const fetchOrders = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/orders');
-      if (response.ok) {
-        const data = await response.json();
-        // バックエンドのデータ形式をOrder形式に変換
-        const formattedOrders: Order[] = data.map((order: any) => ({
-          id: order.id,
-          category: order.category,
-          name: order.name,
-          table: order.table,
-          quantity: order.quantity,
-          time: order.time,
-        }));
-        setOrders(formattedOrders);
-      }
-    } catch (error) {
-      console.error('注文の取得に失敗しました:', error);
-    }
-  };
-
   // 定期的に注文を取得（ポーリング）
   useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/orders');
+        if (response.ok) {
+          const data = await response.json();
+          // バックエンドのデータ形式をOrder形式に変換
+          const formattedOrders: Order[] = data.map((order: any) => ({
+            id: order.id,
+            category: order.category,
+            name: order.name,
+            table: order.table,
+            quantity: order.quantity,
+            time: order.time,
+          }));
+          setOrders(formattedOrders);
+        }
+      } catch (error) {
+        console.error('注文の取得に失敗しました:', error);
+      }
+    };
+
     fetchOrders(); // 初回取得
     const interval = setInterval(fetchOrders, 2000); // 2秒ごとに更新
     return () => clearInterval(interval);

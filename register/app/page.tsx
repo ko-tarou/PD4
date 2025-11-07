@@ -46,10 +46,14 @@ export default function RegisterPage() {
       if (response.ok) {
         const data = await response.json();
         setAllOrders(data);
-        // 選択された卓番の注文をフィルタリング
-        const tableOrders = data.filter(
-          (order: Order) => order.table === `${selectedTable}番` || order.table === selectedTable
-        );
+        // 選択された卓番の注文をフィルタリング（重複を除去）
+        const tableOrders = data
+          .filter(
+            (order: Order) => order.table === `${selectedTable}番` || order.table === selectedTable
+          )
+          .filter((order: Order, index: number, self: Order[]) => 
+            index === self.findIndex((o: Order) => o.id === order.id)
+          ); // 同じIDの重複を除去
         setOrders(tableOrders);
       }
     } catch (error) {
@@ -77,6 +81,9 @@ export default function RegisterPage() {
 
   // 注文の価格を計算
   const getOrderPrice = (order: Order): number => {
+    if (!menuItems || menuItems.length === 0) {
+      return 500 * getQuantity(order.quantity); // メニューが読み込まれるまでのデフォルト価格
+    }
     const menuItem = menuItems.find((item) => item.name === order.name);
     const basePrice = menuItem ? menuItem.price : 500; // デフォルト価格
     const quantity = getQuantity(order.quantity);
@@ -176,12 +183,12 @@ export default function RegisterPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {orders.map((order) => {
+                {orders.map((order, index) => {
                   const price = getOrderPrice(order);
                   const quantity = getQuantity(order.quantity);
                   return (
                     <div
-                      key={order.id}
+                      key={`${order.id}-${index}-${order.table}`}
                       className="border-2 border-gray-200 rounded-lg p-4 hover:border-orange-300 transition-colors"
                     >
                       <div className="flex justify-between items-start mb-2">
@@ -202,7 +209,11 @@ export default function RegisterPage() {
                             ¥{price.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">
-                            ¥{menuItems.find((item) => item.name === order.name)?.price.toLocaleString() || 500} × {quantity}
+                            {(() => {
+                              const menuItem = menuItems && menuItems.length > 0 ? menuItems.find((item) => item.name === order.name) : null;
+                              const unitPrice = menuItem ? menuItem.price : 500;
+                              return `¥${unitPrice.toLocaleString()} × ${quantity}`;
+                            })()}
                           </div>
                         </div>
                       </div>
