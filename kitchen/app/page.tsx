@@ -61,7 +61,11 @@ const OrderManagement: React.FC = () => {
     ]
   };
 
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<Order[]>([
+    { id: 1, category: '揚げ', name: '唐揚げ', table: '1番', quantity: '2個', time: '12:30' },
+    { id: 2, category: '焼き', name: '焼き鳥', table: '3番', quantity: '3個', time: '12:35' },
+    { id: 3, category: '一品', name: '枝豆', table: '5番', quantity: '1個', time: '12:40' },
+  ]);
 
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
   const [deletedOrders, setDeletedOrders] = useState<DeletedOrder[]>([]);
@@ -72,7 +76,7 @@ const OrderManagement: React.FC = () => {
     { id: 3, name: '一品', color: '#5C6327', bgColor: '#EEF7AC' }
   ];
 
-  // 5分後に自動削除する処理
+  // 1分後に自動削除する処理
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
@@ -86,18 +90,23 @@ const OrderManagement: React.FC = () => {
           const deletedTime = new Date();
           const deleteTimeStr = `${deletedTime.getHours()}:${String(deletedTime.getMinutes()).padStart(2, '0')}`;
           
-          setDeletedOrders(prev => [
-            ...prev,
-            ...toDelete.map(order => ({
-              id: order.id,
-              category: order.category,
-              name: order.name,
-              table: order.table,
-              quantity: order.quantity,
-              time: order.time,
-              deletedAt: deleteTimeStr
-            }))
-          ]);
+          setDeletedOrders(prev => {
+            // 既に存在するIDをチェック
+            const existingIds = new Set(prev.map(o => o.id));
+            const newDeleted = toDelete
+              .filter(order => !existingIds.has(order.id))
+              .map(order => ({
+                id: order.id,
+                category: order.category,
+                name: order.name,
+                table: order.table,
+                quantity: order.quantity,
+                time: order.time,
+                deletedAt: deleteTimeStr
+              }));
+            
+            return [...prev, ...newDeleted];
+          });
         }
 
         return prevCompleted.filter(order => {
@@ -172,6 +181,24 @@ const OrderManagement: React.FC = () => {
       };
       setOrders([restoredOrder, ...orders]);
       setDeletedOrders(deletedOrders.filter(o => o.id !== orderId));
+    }
+  };
+
+  const [draggedOrder, setDraggedOrder] = useState<number | null>(null);
+
+  const handleDragStart = (orderId: number) => {
+    setDraggedOrder(orderId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedOrder !== null) {
+      handleCompleteOrder(draggedOrder);
+      setDraggedOrder(null);
     }
   };
 
@@ -354,8 +381,9 @@ const OrderManagement: React.FC = () => {
               .map((order) => (
                 <div 
                   key={order.id} 
-                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-pointer hover:bg-orange-200 transition-colors"
-                  onClick={() => handleCompleteOrder(order.id)}
+                  draggable
+                  onDragStart={() => handleDragStart(order.id)}
+                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-move hover:bg-orange-200 transition-colors"
                 >
                   <div className="font-bold mb-1 text-base">{order.name}</div>
                   <div className="text-sm flex items-center gap-2">
@@ -375,8 +403,9 @@ const OrderManagement: React.FC = () => {
               .map((order) => (
                 <div 
                   key={order.id} 
-                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-pointer hover:bg-orange-200 transition-colors"
-                  onClick={() => handleCompleteOrder(order.id)}
+                  draggable
+                  onDragStart={() => handleDragStart(order.id)}
+                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-move hover:bg-orange-200 transition-colors"
                 >
                   <div className="font-bold mb-1 text-base">{order.name}</div>
                   <div className="text-sm flex items-center gap-2">
@@ -396,8 +425,9 @@ const OrderManagement: React.FC = () => {
               .map((order) => (
                 <div 
                   key={order.id} 
-                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-pointer hover:bg-orange-200 transition-colors"
-                  onClick={() => handleCompleteOrder(order.id)}
+                  draggable
+                  onDragStart={() => handleDragStart(order.id)}
+                  className="bg-orange-100 border-2 border-orange-300 rounded-lg p-3 cursor-move hover:bg-orange-200 transition-colors"
                 >
                   <div className="font-bold mb-1 text-base">{order.name}</div>
                   <div className="text-sm flex items-center gap-2">
@@ -416,7 +446,12 @@ const OrderManagement: React.FC = () => {
           済
         </div>
 
-        <div className="p-4 flex items-center justify-between" style={{ height: '110px', backgroundColor: '#FDFFDA' }}>
+        <div 
+          className="p-4 flex items-center justify-between" 
+          style={{ height: '110px', backgroundColor: '#FDFFDA' }}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
           <div className="flex-1 flex gap-2 overflow-x-auto" style={{ maxHeight: '100px' }}>
             {completedOrders.map((order) => (
               <div key={order.id} className="bg-orange-100 border-2 border-orange-300 rounded-lg p-2 flex-shrink-0">
