@@ -2,10 +2,12 @@
 import { useState } from "react";
 
 export function Sample1() {
-  const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
+const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
   const [activeTab, setActiveTab] = useState("おすすめ");
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
 
   // アクセシビリティ設定
@@ -14,8 +16,6 @@ export function Sample1() {
   const [ageGroup, setAgeGroup] = useState("一般");
 
   const addItemToCart = (item: string) => setCartItems((prev) => [...prev, item]);
-  const removeItem = (index: number) =>
-    setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
 
   const tabItems: Record<string, string[]> = {
@@ -25,37 +25,57 @@ export function Sample1() {
     飲み物: ["ビール", "コーラ", "ウーロン茶"],
   };
 
+  // ✅ 商品名ごとに数量を集計
+  const itemCounts = cartItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div
       className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
       style={{ fontSize: `${fontSize}px` }}
     >
-      {/* タブメニュー */}
-      <div className="flex items-center justify-between bg-gray-100 px-6 py-3 shadow-sm w-full">
-        <div className="flex space-x-2">
-          {tabs.map((tab) => (
+      {/* 🔳 黒背景付きタブバー */}
+      <div className="w-full bg-black flex flex-col items-center">
+        <div className="flex items-center justify-between w-full px-6 py-3 relative">
+          <div className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
+                  activeTab === tab
+                    ? "bg-orange-400 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {/* ✅ お支払いボタン */}
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
-                activeTab === tab
-                  ? "bg-orange-400 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={() => setPaymentOpen(true)}
+              className="text-black bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100"
             >
-              {tab}
+              お支払い
             </button>
-          ))}
+
+            {/* ⚙️ 設定ボタン */}
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="text-white hover:text-gray-300 text-3xl"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="text-gray-600 hover:text-gray-800 text-3xl"
-        >
-          ⚙️
-        </button>
       </div>
 
-      {/* コンテンツ枠 */}
+      {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {tabItems[activeTab].map((item) => (
           <div
@@ -73,120 +93,71 @@ export function Sample1() {
         ))}
       </div>
 
-      {/* カートモーダル */}
-      {cartOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-20">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ 注文確認モーダル */}
+      {confirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-96 text-center relative">
+            {/* ✅ モーダル右上に閉じる×ボタン */}
             <button
-              onClick={() => setCartOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setConfirmOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
+              ×
             </button>
-            <h2 className="text-lg font-bold mb-3">カート</h2>
-            {cartItems.length === 0 ? (
-              <p className="text-gray-500 text-sm">カートは空です</p>
+
+            <h2 className="text-lg font-bold mb-6">ご注文内容</h2>
+
+            {Object.keys(itemCounts).length === 0 ? (
+              <p className="text-gray-500 mb-6">カートは空です</p>
             ) : (
-              <ul className="space-y-2 mb-3">
-                {cartItems.map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center border-b border-gray-200 pb-1"
+              <div className="grid grid-cols-2 gap-6 justify-center items-center mb-6">
+                {Object.entries(itemCounts).map(([name, count]) => (
+                  <div
+                    key={name}
+                    className="relative flex flex-col items-center justify-center"
                   >
-                    <span>{item}</span>
+                    {/* ✅ 各商品削除ボタン */}
                     <button
-                      onClick={() => removeItem(index)}
-                      className="text-xs text-red-500 hover:text-red-600"
+                      onClick={() =>
+                        setCartItems((prev) => prev.filter((item) => item !== name))
+                      }
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600"
                     >
-                      削除
+                      ×
                     </button>
-                  </li>
+
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-32 h-16 border border-gray-300 rounded-full flex items-center justify-center text-gray-700 font-medium text-base">
+                        {name}
+                      </div>
+                      <span className="text-gray-700 font-bold text-base">
+                        ×{count}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            {cartItems.length > 0 && (
-              <button
-                onClick={clearCart}
-                className="bg-gray-200 text-gray-700 w-full py-1 rounded hover:bg-gray-300 text-sm"
-              >
-                カートを空にする
-              </button>
-            )}
+
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800"
+            >
+              送信
+            </button>
           </div>
         </div>
       )}
 
-      {/* アクセシビリティ設定モーダル */}
-      {settingsOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-30">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ お支払いモーダル */}
+      {paymentOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-80 text-center relative">
             <button
-              onClick={() => setSettingsOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setPaymentOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
-            </button>
-            <h2 className="text-lg font-bold mb-4">アクセシビリティ設定</h2>
-
-            {/* 音量設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">音量</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{volume}%</p>
-            </label>
-
-            {/* 文字サイズ設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">文字の大きさ</span>
-              <input
-                type="range"
-                min="12"
-                max="28"
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{fontSize}px</p>
-            </label>
-
-            {/* 年齢別設定 */}
-            <label className="block mb-6">
-              <span className="text-gray-700 text-sm font-medium">年齢別おすすめ設定</span>
-              <select
-                value={ageGroup}
-                onChange={(e) => {
-                  setAgeGroup(e.target.value);
-                  if (e.target.value === "子ども") {
-                    setFontSize(20);
-                    setVolume(30);
-                  } else if (e.target.value === "高齢者") {
-                    setFontSize(24);
-                    setVolume(70);
-                  } else {
-                    setFontSize(16);
-                    setVolume(50);
-                  }
-                }}
-                className="w-full mt-2 border rounded px-2 py-1"
-              >
-                <option value="一般">一般</option>
-                <option value="子ども">子ども向け</option>
-                <option value="高齢者">高齢者向け</option>
-              </select>
-            </label>
-
-            <button
-              onClick={() => setSettingsOpen(false)}
-              className="bg-orange-400 text-white w-full py-2 rounded hover:bg-orange-500 transition"
-            >
-              保存して閉じる
+              ×
             </button>
           </div>
         </div>
@@ -208,18 +179,22 @@ export function Sample1() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
+        <button
+          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
+        >
           注文
         </button>
       </div>
     </div>
-  );
-}
+  );}
 export function Sample2() {
-  const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
+   const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
   const [activeTab, setActiveTab] = useState("おすすめ");
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
 
   // アクセシビリティ設定
@@ -228,8 +203,6 @@ export function Sample2() {
   const [ageGroup, setAgeGroup] = useState("一般");
 
   const addItemToCart = (item: string) => setCartItems((prev) => [...prev, item]);
-  const removeItem = (index: number) =>
-    setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
 
   const tabItems: Record<string, string[]> = {
@@ -239,37 +212,57 @@ export function Sample2() {
     飲み物: ["ビール", "コーラ", "ウーロン茶"],
   };
 
+  // ✅ 商品名ごとに数量を集計
+  const itemCounts = cartItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div
       className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
       style={{ fontSize: `${fontSize}px` }}
     >
-      {/* タブメニュー */}
-      <div className="flex items-center justify-between bg-gray-100 px-6 py-3 shadow-sm w-full">
-        <div className="flex space-x-2">
-          {tabs.map((tab) => (
+      {/* 🔳 黒背景付きタブバー */}
+      <div className="w-full bg-black flex flex-col items-center">
+        <div className="flex items-center justify-between w-full px-6 py-3 relative">
+          <div className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
+                  activeTab === tab
+                    ? "bg-orange-400 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {/* ✅ お支払いボタン */}
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
-                activeTab === tab
-                  ? "bg-orange-400 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={() => setPaymentOpen(true)}
+              className="text-black bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100"
             >
-              {tab}
+              お支払い
             </button>
-          ))}
+
+            {/* ⚙️ 設定ボタン */}
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="text-white hover:text-gray-300 text-3xl"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="text-gray-600 hover:text-gray-800 text-3xl"
-        >
-          ⚙️
-        </button>
       </div>
 
-      {/* コンテンツ枠 */}
+      {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {tabItems[activeTab].map((item) => (
           <div
@@ -287,120 +280,71 @@ export function Sample2() {
         ))}
       </div>
 
-      {/* カートモーダル */}
-      {cartOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-20">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ 注文確認モーダル */}
+      {confirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-96 text-center relative">
+            {/* ✅ モーダル右上に閉じる×ボタン */}
             <button
-              onClick={() => setCartOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setConfirmOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
+              ×
             </button>
-            <h2 className="text-lg font-bold mb-3">カート</h2>
-            {cartItems.length === 0 ? (
-              <p className="text-gray-500 text-sm">カートは空です</p>
+
+            <h2 className="text-lg font-bold mb-6">ご注文内容</h2>
+
+            {Object.keys(itemCounts).length === 0 ? (
+              <p className="text-gray-500 mb-6">カートは空です</p>
             ) : (
-              <ul className="space-y-2 mb-3">
-                {cartItems.map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center border-b border-gray-200 pb-1"
+              <div className="grid grid-cols-2 gap-6 justify-center items-center mb-6">
+                {Object.entries(itemCounts).map(([name, count]) => (
+                  <div
+                    key={name}
+                    className="relative flex flex-col items-center justify-center"
                   >
-                    <span>{item}</span>
+                    {/* ✅ 各商品削除ボタン */}
                     <button
-                      onClick={() => removeItem(index)}
-                      className="text-xs text-red-500 hover:text-red-600"
+                      onClick={() =>
+                        setCartItems((prev) => prev.filter((item) => item !== name))
+                      }
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600"
                     >
-                      削除
+                      ×
                     </button>
-                  </li>
+
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-32 h-16 border border-gray-300 rounded-full flex items-center justify-center text-gray-700 font-medium text-base">
+                        {name}
+                      </div>
+                      <span className="text-gray-700 font-bold text-base">
+                        ×{count}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            {cartItems.length > 0 && (
-              <button
-                onClick={clearCart}
-                className="bg-gray-200 text-gray-700 w-full py-1 rounded hover:bg-gray-300 text-sm"
-              >
-                カートを空にする
-              </button>
-            )}
+
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800"
+            >
+              送信
+            </button>
           </div>
         </div>
       )}
 
-      {/* アクセシビリティ設定モーダル */}
-      {settingsOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-30">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ お支払いモーダル */}
+      {paymentOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-80 text-center relative">
             <button
-              onClick={() => setSettingsOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setPaymentOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
-            </button>
-            <h2 className="text-lg font-bold mb-4">アクセシビリティ設定</h2>
-
-            {/* 音量設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">音量</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{volume}%</p>
-            </label>
-
-            {/* 文字サイズ設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">文字の大きさ</span>
-              <input
-                type="range"
-                min="12"
-                max="28"
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{fontSize}px</p>
-            </label>
-
-            {/* 年齢別設定 */}
-            <label className="block mb-6">
-              <span className="text-gray-700 text-sm font-medium">年齢別おすすめ設定</span>
-              <select
-                value={ageGroup}
-                onChange={(e) => {
-                  setAgeGroup(e.target.value);
-                  if (e.target.value === "子ども") {
-                    setFontSize(20);
-                    setVolume(30);
-                  } else if (e.target.value === "高齢者") {
-                    setFontSize(24);
-                    setVolume(70);
-                  } else {
-                    setFontSize(16);
-                    setVolume(50);
-                  }
-                }}
-                className="w-full mt-2 border rounded px-2 py-1"
-              >
-                <option value="一般">一般</option>
-                <option value="子ども">子ども向け</option>
-                <option value="高齢者">高齢者向け</option>
-              </select>
-            </label>
-
-            <button
-              onClick={() => setSettingsOpen(false)}
-              className="bg-orange-400 text-white w-full py-2 rounded hover:bg-orange-500 transition"
-            >
-              保存して閉じる
+              ×
             </button>
           </div>
         </div>
@@ -422,18 +366,24 @@ export function Sample2() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
+        <button
+          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
+        >
           注文
         </button>
       </div>
     </div>
   );
 }
+
 export default function Sample3() {
   const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
   const [activeTab, setActiveTab] = useState("おすすめ");
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
 
   // アクセシビリティ設定
@@ -442,8 +392,6 @@ export default function Sample3() {
   const [ageGroup, setAgeGroup] = useState("一般");
 
   const addItemToCart = (item: string) => setCartItems((prev) => [...prev, item]);
-  const removeItem = (index: number) =>
-    setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
 
   const tabItems: Record<string, string[]> = {
@@ -453,37 +401,57 @@ export default function Sample3() {
     飲み物: ["ビール", "コーラ", "ウーロン茶"],
   };
 
+  // ✅ 商品名ごとに数量を集計
+  const itemCounts = cartItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
     <div
       className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
       style={{ fontSize: `${fontSize}px` }}
     >
-      {/* タブメニュー */}
-      <div className="flex items-center justify-between bg-gray-100 px-6 py-3 shadow-sm w-full">
-        <div className="flex space-x-2">
-          {tabs.map((tab) => (
+      {/* 🔳 黒背景付きタブバー */}
+      <div className="w-full bg-black flex flex-col items-center">
+        <div className="flex items-center justify-between w-full px-6 py-3 relative">
+          <div className="flex space-x-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
+                  activeTab === tab
+                    ? "bg-orange-400 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {/* ✅ お支払いボタン */}
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
-                activeTab === tab
-                  ? "bg-orange-400 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-200"
-              }`}
+              onClick={() => setPaymentOpen(true)}
+              className="text-black bg-white border border-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-100"
             >
-              {tab}
+              お支払い
             </button>
-          ))}
+
+            {/* ⚙️ 設定ボタン */}
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="text-white hover:text-gray-300 text-3xl"
+            >
+              ⚙️
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="text-gray-600 hover:text-gray-800 text-3xl"
-        >
-          ⚙️
-        </button>
       </div>
 
-      {/* コンテンツ枠 */}
+      {/* 商品グリッド */}
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {tabItems[activeTab].map((item) => (
           <div
@@ -501,120 +469,71 @@ export default function Sample3() {
         ))}
       </div>
 
-      {/* カートモーダル */}
-      {cartOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-20">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ 注文確認モーダル */}
+      {confirmOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-96 text-center relative">
+            {/* ✅ モーダル右上に閉じる×ボタン */}
             <button
-              onClick={() => setCartOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setConfirmOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
+              ×
             </button>
-            <h2 className="text-lg font-bold mb-3">カート</h2>
-            {cartItems.length === 0 ? (
-              <p className="text-gray-500 text-sm">カートは空です</p>
+
+            <h2 className="text-lg font-bold mb-6">ご注文内容</h2>
+
+            {Object.keys(itemCounts).length === 0 ? (
+              <p className="text-gray-500 mb-6">カートは空です</p>
             ) : (
-              <ul className="space-y-2 mb-3">
-                {cartItems.map((item, index) => (
-                  <li
-                    key={index}
-                    className="flex justify-between items-center border-b border-gray-200 pb-1"
+              <div className="grid grid-cols-2 gap-6 justify-center items-center mb-6">
+                {Object.entries(itemCounts).map(([name, count]) => (
+                  <div
+                    key={name}
+                    className="relative flex flex-col items-center justify-center"
                   >
-                    <span>{item}</span>
+                    {/* ✅ 各商品削除ボタン */}
                     <button
-                      onClick={() => removeItem(index)}
-                      className="text-xs text-red-500 hover:text-red-600"
+                      onClick={() =>
+                        setCartItems((prev) => prev.filter((item) => item !== name))
+                      }
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600"
                     >
-                      削除
+                      ×
                     </button>
-                  </li>
+
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-32 h-16 border border-gray-300 rounded-full flex items-center justify-center text-gray-700 font-medium text-base">
+                        {name}
+                      </div>
+                      <span className="text-gray-700 font-bold text-base">
+                        ×{count}
+                      </span>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
-            {cartItems.length > 0 && (
-              <button
-                onClick={clearCart}
-                className="bg-gray-200 text-gray-700 w-full py-1 rounded hover:bg-gray-300 text-sm"
-              >
-                カートを空にする
-              </button>
-            )}
+
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="bg-black text-white px-6 py-2 rounded hover:bg-gray-800"
+            >
+              送信
+            </button>
           </div>
         </div>
       )}
 
-      {/* アクセシビリティ設定モーダル */}
-      {settingsOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-30">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-96 relative">
+      {/* ✅ お支払いモーダル */}
+      {paymentOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-40">
+          <div className="bg-white rounded-lg p-8 shadow-lg w-80 text-center relative">
             <button
-              onClick={() => setSettingsOpen(false)}
-              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setPaymentOpen(false)}
+              className="absolute top-3 right-4 text-gray-500 hover:text-gray-700 text-2xl"
             >
-              ✕
-            </button>
-            <h2 className="text-lg font-bold mb-4">アクセシビリティ設定</h2>
-
-            {/* 音量設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">音量</span>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={volume}
-                onChange={(e) => setVolume(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{volume}%</p>
-            </label>
-
-            {/* 文字サイズ設定 */}
-            <label className="block mb-4">
-              <span className="text-gray-700 text-sm font-medium">文字の大きさ</span>
-              <input
-                type="range"
-                min="12"
-                max="28"
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                className="w-full mt-2"
-              />
-              <p className="text-xs text-gray-500 text-right">{fontSize}px</p>
-            </label>
-
-            {/* 年齢別設定 */}
-            <label className="block mb-6">
-              <span className="text-gray-700 text-sm font-medium">年齢別おすすめ設定</span>
-              <select
-                value={ageGroup}
-                onChange={(e) => {
-                  setAgeGroup(e.target.value);
-                  if (e.target.value === "子ども") {
-                    setFontSize(20);
-                    setVolume(30);
-                  } else if (e.target.value === "高齢者") {
-                    setFontSize(24);
-                    setVolume(70);
-                  } else {
-                    setFontSize(16);
-                    setVolume(50);
-                  }
-                }}
-                className="w-full mt-2 border rounded px-2 py-1"
-              >
-                <option value="一般">一般</option>
-                <option value="子ども">子ども向け</option>
-                <option value="高齢者">高齢者向け</option>
-              </select>
-            </label>
-
-            <button
-              onClick={() => setSettingsOpen(false)}
-              className="bg-orange-400 text-white w-full py-2 rounded hover:bg-orange-500 transition"
-            >
-              保存して閉じる
+              ×
             </button>
           </div>
         </div>
@@ -636,7 +555,10 @@ export default function Sample3() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
+        <button
+          onClick={() => setConfirmOpen(true)} // ← 注文ボタンで確認画面を開く
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg"
+        >
           注文
         </button>
       </div>
