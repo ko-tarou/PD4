@@ -8,6 +8,13 @@ type Item = {
   color: string;
 };
 
+// 色順を定義（赤→青→グレー）
+const colorOrder: Record<string, number> = {
+  red: 1,
+  blue: 2,
+  gray: 3,
+};
+
 export default function OrderBoard() {
   const [done, setDone] = useState<Item[]>([]);
   const [pending, setPending] = useState<Item[]>([
@@ -53,6 +60,13 @@ export default function OrderBoard() {
     }
   };
 
+  // 🧩 色順ソート関数
+  const sortByColor = (items: Item[]) => {
+    return [...items].sort(
+      (a, b) => (colorOrder[a.color] ?? 99) - (colorOrder[b.color] ?? 99)
+    );
+  };
+
   return (
     <>
       {/* 背景固定 */}
@@ -71,7 +85,7 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">済</h1>
           <div className="flex flex-col gap-4 pb-20">
-            {done.map((item) => (
+            {sortByColor(done).map((item) => (
               <button
                 key={item.id}
                 draggable
@@ -98,7 +112,7 @@ export default function OrderBoard() {
         >
           <h1 className="text-4xl mb-6">未</h1>
           <div className="flex flex-col gap-4 pb-20">
-            {pending.map((item) => (
+            {sortByColor(pending).map((item) => (
               <button
                 key={item.id}
                 draggable
