@@ -277,7 +277,7 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  const handleCompleteOrder = (orderId: number) => {
+  const handleCompleteOrder = async (orderId: number) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
       try {

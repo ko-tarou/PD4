@@ -491,10 +491,14 @@ export default function Sample3() {
             quantity: "1",
             time: timeStr,
           }),
+        }).catch((fetchError) => {
+          console.error("ネットワークエラー:", fetchError);
+          throw new Error("バックエンドサーバーに接続できません。サーバーが起動しているか確認してください。");
         });
 
         if (!response.ok) {
-          throw new Error("注文の送信に失敗しました");
+          const errorText = await response.text().catch(() => "不明なエラー");
+          throw new Error(`注文の送信に失敗しました: ${errorText}`);
         }
 
         return response.json();
