@@ -208,8 +208,12 @@ export function Sample1() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
-          注文
+        <button
+          onClick={handleOrder}
+          disabled={isOrdering || cartItems.length === 0}
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isOrdering ? "送信中..." : "注文"}
         </button>
       </div>
     </div>
@@ -422,8 +426,12 @@ export function Sample2() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
-          注文
+        <button
+          onClick={handleOrder}
+          disabled={isOrdering || cartItems.length === 0}
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isOrdering ? "送信中..." : "注文"}
         </button>
       </div>
     </div>
@@ -435,6 +443,7 @@ export default function Sample3() {
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
+  const [isOrdering, setIsOrdering] = useState(false);
 
   // アクセシビリティ設定
   const [volume, setVolume] = useState(50);
@@ -445,6 +454,63 @@ export default function Sample3() {
   const removeItem = (index: number) =>
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
+
+  // 注文を送信する関数
+  const handleOrder = async () => {
+    if (cartItems.length === 0) {
+      alert("カートが空です");
+      return;
+    }
+
+    setIsOrdering(true);
+    try {
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+      // カート内の各アイテムを注文として送信
+      const orderPromises = cartItems.map(async (item) => {
+        // カテゴリをkitchenアプリの形式に合わせる（揚げ、焼き、一品）
+        let category = "一品"; // デフォルト
+        if (["唐揚げ", "とんかつ", "エビフライ", "天ぷら盛り合わせ", "フライドポテト", "チキンカツ", "アジフライ", "コロッケ"].includes(item)) {
+          category = "揚げ";
+        } else if (["焼き鳥", "ハンバーグ", "ステーキ", "焼き魚", "鉄板焼き", "お好み焼き", "もんじゃ焼き", "焼きそば"].includes(item)) {
+          category = "焼き";
+        } else if (["枝豆", "冷奴", "サラダ", "刺身盛り合わせ", "漬物盛り合わせ", "チーズ盛り合わせ", "ナムル", "キムチ", "ラーメン", "ポテト", "餃子", "ビール", "コーラ", "ウーロン茶"].includes(item)) {
+          category = "一品";
+        }
+
+        const response = await fetch("http://localhost:3001/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            category,
+            name: item,
+            table: "1", // 仮の卓番、後で実装
+            quantity: "1",
+            time: timeStr,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("注文の送信に失敗しました");
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(orderPromises);
+      alert("注文が送信されました！");
+      clearCart();
+      setCartOpen(false);
+    } catch (error) {
+      console.error("注文エラー:", error);
+      alert("注文の送信に失敗しました。もう一度お試しください。");
+    } finally {
+      setIsOrdering(false);
+    }
+  };
 
   const tabItems: Record<string, string[]> = {
     おすすめ: ["ラーメン", "唐揚げ", "ポテト"],
@@ -636,8 +702,12 @@ export default function Sample3() {
           )}
         </button>
 
-        <button className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg">
-          注文
+        <button
+          onClick={handleOrder}
+          disabled={isOrdering || cartItems.length === 0}
+          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isOrdering ? "送信中..." : "注文"}
         </button>
       </div>
     </div>

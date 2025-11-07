@@ -61,11 +61,7 @@ const OrderManagement: React.FC = () => {
     ]
   };
 
-  const [orders, setOrders] = useState<Order[]>([
-    { id: 1, category: '揚げ', name: '唐揚げ', table: '1番', quantity: '2個', time: '12:30' },
-    { id: 2, category: '焼き', name: '焼き鳥', table: '3番', quantity: '3個', time: '12:35' },
-    { id: 3, category: '一品', name: '枝豆', table: '5番', quantity: '1個', time: '12:40' },
-  ]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   const [completedOrders, setCompletedOrders] = useState<CompletedOrder[]>([]);
   const [deletedOrders, setDeletedOrders] = useState<DeletedOrder[]>([]);
@@ -75,6 +71,35 @@ const OrderManagement: React.FC = () => {
     { id: 2, name: '焼き', color: '#6D4B30', bgColor: '#B18869' },
     { id: 3, name: '一品', color: '#5C6327', bgColor: '#EEF7AC' }
   ];
+
+  // バックエンドから注文を取得する関数
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/orders');
+      if (response.ok) {
+        const data = await response.json();
+        // バックエンドのデータ形式をOrder形式に変換
+        const formattedOrders: Order[] = data.map((order: any) => ({
+          id: order.id,
+          category: order.category,
+          name: order.name,
+          table: order.table,
+          quantity: order.quantity,
+          time: order.time,
+        }));
+        setOrders(formattedOrders);
+      }
+    } catch (error) {
+      console.error('注文の取得に失敗しました:', error);
+    }
+  };
+
+  // 定期的に注文を取得（ポーリング）
+  useEffect(() => {
+    fetchOrders(); // 初回取得
+    const interval = setInterval(fetchOrders, 2000); // 2秒ごとに更新
+    return () => clearInterval(interval);
+  }, []);
 
   // 1分後に自動削除する処理
   useEffect(() => {
@@ -128,7 +153,7 @@ const OrderManagement: React.FC = () => {
     setSelectedDish(dishName);
   };
 
-  const handleOrderSubmit = () => {
+  const handleOrderSubmit = async () => {
     if (!selectedDish || !tableNumber || !quantity) {
       alert('品名、卓番、個数を入力してください');
       return;
@@ -137,20 +162,45 @@ const OrderManagement: React.FC = () => {
     const now = new Date();
     const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const newOrder: Order = {
-      id: Date.now(),
-      category: selectedCategory!,
-      name: selectedDish,
-      table: `${tableNumber}番`,
-      quantity: `${quantity}個`,
-      time: timeStr
-    };
+    try {
+      // バックエンドに注文を送信
+      const response = await fetch('http://localhost:3001/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          category: selectedCategory!,
+          name: selectedDish,
+          table: `${tableNumber}番`,
+          quantity: `${quantity}個`,
+          time: timeStr,
+        }),
+      });
 
-    setOrders([newOrder, ...orders]); // 上に追加
-    setShowOrderModal(false);
-    setSelectedDish(null);
-    setTableNumber('');
-    setQuantity('1');
+      if (response.ok) {
+        const newOrder = await response.json();
+        // 注文を追加（バックエンドから取得したデータを使用）
+        const formattedOrder: Order = {
+          id: newOrder.id,
+          category: newOrder.category,
+          name: newOrder.name,
+          table: newOrder.table,
+          quantity: newOrder.quantity,
+          time: newOrder.time,
+        };
+        setOrders([formattedOrder, ...orders]); // 上に追加
+        setShowOrderModal(false);
+        setSelectedDish(null);
+        setTableNumber('');
+        setQuantity('1');
+      } else {
+        alert('注文の送信に失敗しました');
+      }
+    } catch (error) {
+      console.error('注文エラー:', error);
+      alert('注文の送信に失敗しました');
+    }
   };
 
   const handleDeleteClick = () => {
@@ -230,12 +280,30 @@ const OrderManagement: React.FC = () => {
   const handleCompleteOrder = (orderId: number) => {
     const order = orders.find(o => o.id === orderId);
     if (order) {
-      const completedOrder: CompletedOrder = {
-        ...order,
-        completedAt: Date.now()
-      };
-      setCompletedOrders([...completedOrders, completedOrder]); // 左から順に追加
-      setOrders(orders.filter(o => o.id !== orderId));
+      try {
+        // バックエンドに完了を通知
+        const response = await fetch(`http://localhost:3001/api/orders/${orderId}/complete`, {
+          method: 'PATCH',
+        });
+        
+        if (response.ok) {
+          const completedOrder: CompletedOrder = {
+            ...order,
+            completedAt: Date.now()
+          };
+          setCompletedOrders([...completedOrders, completedOrder]); // 左から順に追加
+          setOrders(orders.filter(o => o.id !== orderId));
+        }
+      } catch (error) {
+        console.error('注文の完了処理に失敗しました:', error);
+        // エラーが発生してもローカル状態は更新
+        const completedOrder: CompletedOrder = {
+          ...order,
+          completedAt: Date.now()
+        };
+        setCompletedOrders([...completedOrders, completedOrder]);
+        setOrders(orders.filter(o => o.id !== orderId));
+      }
     }
   };
 
