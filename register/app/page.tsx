@@ -11,51 +11,33 @@ interface Order {
 }
 
 interface MenuItem {
+  id: number;
+  tabId: number;
   name: string;
   price: number;
   category: string;
 }
 
-// メニュー価格表（仮のデータ）
-const menuPrices: Record<string, number> = {
-  唐揚げ: 580,
-  とんかつ: 850,
-  エビフライ: 780,
-  天ぷら盛り合わせ: 980,
-  フライドポテト: 380,
-  チキンカツ: 680,
-  アジフライ: 680,
-  コロッケ: 480,
-  焼き鳥: 120,
-  ハンバーグ: 980,
-  ステーキ: 1980,
-  焼き魚: 880,
-  鉄板焼き: 1280,
-  お好み焼き: 680,
-  もんじゃ焼き: 580,
-  焼きそば: 580,
-  枝豆: 380,
-  冷奴: 280,
-  サラダ: 480,
-  刺身盛り合わせ: 1280,
-  漬物盛り合わせ: 380,
-  チーズ盛り合わせ: 580,
-  ナムル: 380,
-  キムチ: 280,
-  ラーメン: 680,
-  ポテト: 380,
-  餃子: 480,
-  ビール: 480,
-  コーラ: 200,
-  ウーロン茶: 200,
-};
-
 export default function RegisterPage() {
   const [selectedTable, setSelectedTable] = useState<string>("1");
   const [orders, setOrders] = useState<Order[]>([]);
   const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+
+  // バックエンドからメニューアイテムを取得
+  const fetchMenuItems = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/menu/items");
+      if (response.ok) {
+        const data = await response.json();
+        setMenuItems(data);
+      }
+    } catch (error) {
+      console.error("メニューアイテムの取得に失敗しました:", error);
+    }
+  };
 
   // バックエンドから全注文を取得
   const fetchOrders = async () => {
@@ -75,6 +57,11 @@ export default function RegisterPage() {
     }
   };
 
+  // 初回ロード時にメニューアイテムを取得
+  useEffect(() => {
+    fetchMenuItems();
+  }, []);
+
   // 卓番が変更されたら注文を再取得
   useEffect(() => {
     fetchOrders();
@@ -90,7 +77,8 @@ export default function RegisterPage() {
 
   // 注文の価格を計算
   const getOrderPrice = (order: Order): number => {
-    const basePrice = menuPrices[order.name] || 500; // デフォルト価格
+    const menuItem = menuItems.find((item) => item.name === order.name);
+    const basePrice = menuItem ? menuItem.price : 500; // デフォルト価格
     const quantity = getQuantity(order.quantity);
     return basePrice * quantity;
   };
@@ -214,7 +202,7 @@ export default function RegisterPage() {
                             ¥{price.toLocaleString()}
                           </div>
                           <div className="text-sm text-gray-500">
-                            ¥{menuPrices[order.name]?.toLocaleString() || 500} × {quantity}
+                            ¥{menuItems.find((item) => item.name === order.name)?.price.toLocaleString() || 500} × {quantity}
                           </div>
                         </div>
                       </div>
