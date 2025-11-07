@@ -59,18 +59,18 @@ export function Sample1() {
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
           tabItems[activeTab].map((item) => (
-            <div
-              key={item}
-              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          <div
+            key={item}
+            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          >
+            <p className="text-gray-700 text-sm">{item}</p>
+            <button
+              onClick={() => addItemToCart(item)}
+              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
             >
-              <p className="text-gray-700 text-sm">{item}</p>
-              <button
-                onClick={() => addItemToCart(item)}
-                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
-              >
-                追加
-              </button>
-            </div>
+              追加
+            </button>
+          </div>
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
@@ -283,18 +283,18 @@ export function Sample2() {
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
           tabItems[activeTab].map((item) => (
-            <div
-              key={item}
-              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          <div
+            key={item}
+            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          >
+            <p className="text-gray-700 text-sm">{item}</p>
+            <button
+              onClick={() => addItemToCart(item)}
+              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
             >
-              <p className="text-gray-700 text-sm">{item}</p>
-              <button
-                onClick={() => addItemToCart(item)}
-                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
-              >
-                追加
-              </button>
-            </div>
+              追加
+            </button>
+          </div>
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
@@ -464,6 +464,9 @@ interface MenuItem {
 }
 
 export default function Sample3() {
+  // 年齢選択が完了したかどうか
+  const [ageSelected, setAgeSelected] = useState<string | null>(null);
+  
   const [tabs, setTabs] = useState<MenuTab[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [tabItems, setTabItems] = useState<Record<string, string[]>>({});
@@ -586,6 +589,176 @@ export default function Sample3() {
     }
   };
 
+  // 年齢選択画面を表示
+  if (!ageSelected) {
+    const selectAge = (age: string) => {
+      setAgeSelected(age);
+      // 年齢に応じて設定を調整
+      if (age === "12以下") {
+        setAgeGroup("子ども");
+        setFontSize(20);
+        setVolume(30);
+      } else if (age === "60以上") {
+        setAgeGroup("高齢者");
+        setFontSize(24);
+        setVolume(70);
+      } else {
+        setAgeGroup("一般");
+        setFontSize(16);
+        setVolume(50);
+      }
+    };
+
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        background: '#f0f0f0',
+        fontFamily: "'Hiragino Sans', 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif"
+      }}>
+        <div style={{
+          width: '840px',
+          height: '700px',
+          background: 'white',
+          border: '3px solid white',
+          borderRadius: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '60px',
+          position: 'relative'
+        }}>
+          {/* Corner decorations */}
+          <div style={{
+            position: 'absolute',
+            width: '40px',
+            height: '40px',
+            border: '4px solid white',
+            top: '-4px',
+            left: '-4px',
+            borderRight: 'none',
+            borderBottom: 'none'
+          }} />
+          <div style={{
+            position: 'absolute',
+            width: '40px',
+            height: '40px',
+            border: '4px solid white',
+            top: '-4px',
+            right: '-4px',
+            borderLeft: 'none',
+            borderBottom: 'none'
+          }} />
+          <div style={{
+            position: 'absolute',
+            width: '40px',
+            height: '40px',
+            border: '4px solid white',
+            bottom: '-4px',
+            left: '-4px',
+            borderRight: 'none',
+            borderTop: 'none'
+          }} />
+          <div style={{
+            position: 'absolute',
+            width: '40px',
+            height: '40px',
+            border: '4px solid white',
+            bottom: '-4px',
+            right: '-4px',
+            borderLeft: 'none',
+            borderTop: 'none'
+          }} />
+          
+          <h1 style={{
+            fontSize: '42px',
+            fontWeight: 'bold',
+            color: '#333',
+            marginBottom: '30px',
+            letterSpacing: '2px'
+          }}>
+            年齢確認
+          </h1>
+          
+          <p style={{
+            fontSize: '20px',
+            color: '#666',
+            marginBottom: '50px',
+            letterSpacing: '1px'
+          }}>
+            ご注文に進む前に年齢をお選びください
+          </p>
+          
+          <button 
+            onClick={() => selectAge('12以下')}
+            style={{
+              width: '450px',
+              height: '80px',
+              background: 'linear-gradient(180deg, #ff9d2e 0%, #ff8c00 100%)',
+              border: 'none',
+              borderRadius: '50px',
+              fontSize: '26px',
+              fontWeight: 'bold',
+              color: 'white',
+              cursor: 'pointer',
+              margin: '12px 0',
+              boxShadow: '0 6px 0 #d97700',
+              letterSpacing: '2px',
+              transition: 'all 0.1s'
+            }}
+          >
+            12歳以下
+          </button>
+          
+          <button 
+            onClick={() => selectAge('12以上')}
+            style={{
+              width: '450px',
+              height: '80px',
+              background: 'linear-gradient(180deg, #ff9d2e 0%, #ff8c00 100%)',
+              border: 'none',
+              borderRadius: '50px',
+              fontSize: '26px',
+              fontWeight: 'bold',
+              color: 'white',
+              cursor: 'pointer',
+              margin: '12px 0',
+              boxShadow: '0 6px 0 #d97700',
+              letterSpacing: '2px',
+              transition: 'all 0.1s'
+            }}
+          >
+            12歳以上
+          </button>
+          
+          <button 
+            onClick={() => selectAge('60以上')}
+            style={{
+              width: '450px',
+              height: '80px',
+              background: 'linear-gradient(180deg, #ff9d2e 0%, #ff8c00 100%)',
+              border: 'none',
+              borderRadius: '50px',
+              fontSize: '26px',
+              fontWeight: 'bold',
+              color: 'white',
+              cursor: 'pointer',
+              margin: '12px 0',
+              boxShadow: '0 6px 0 #d97700',
+              letterSpacing: '2px',
+              transition: 'all 0.1s'
+            }}
+          >
+            60歳以上
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
@@ -620,18 +793,18 @@ export default function Sample3() {
       <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
         {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
           tabItems[activeTab].map((item) => (
-            <div
-              key={item}
-              className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          <div
+            key={item}
+            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
+          >
+            <p className="text-gray-700 text-sm">{item}</p>
+            <button
+              onClick={() => addItemToCart(item)}
+              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
             >
-              <p className="text-gray-700 text-sm">{item}</p>
-              <button
-                onClick={() => addItemToCart(item)}
-                className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
-              >
-                追加
-              </button>
-            </div>
+              追加
+            </button>
+          </div>
           ))
         ) : (
           <div className="col-span-full text-center py-12 text-gray-500">
