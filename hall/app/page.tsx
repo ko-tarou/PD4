@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 
 type Item = {
@@ -8,19 +8,54 @@ type Item = {
   color: string;
 };
 
-const getColorFromLabel = (label: string): string => {
-  const lower = label.toLowerCase();
+interface Order {
+  id: number;
+  category: string;
+  name: string;
+  table: string;
+  quantity: string;
+  time: string;
+}
 
-  if (label.includes('呼び出し')) return 'red';
+interface MenuItem {
+  id: number;
+  tabId: number;
+  name: string;
+  price: number;
+  category: string;
+}
+
+// 注文から色を自動判定する関数
+const getColorFromOrder = (order: Order, menuItems: MenuItem[]): string => {
+  if (order.name.includes('呼び出し')) return 'red';
+
+  if (!menuItems || menuItems.length === 0) {
+    const drinkKeywords = [
+      'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
+      'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
+      'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
+    ];
+    const orderNameLower = order.name.toLowerCase();
+    if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
+      return 'blue';
+    }
+    return 'gray';
+  }
+
+  const menuItem = menuItems.find(item => item.name === order.name);
+
+  if (menuItem && menuItem.tabId === 4) {
+    return 'blue';
+  }
 
   const drinkKeywords = [
     'ドリンク', 'お冷', '飲み物', 'コーラ', 'ウーロン茶', '緑茶',
     'お茶', 'コーヒー', 'ビール', '生ビール', 'ハイボール',
-    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー',
-    'beer', 'cola', 'coffee', 'tea', 'highball'
+    'チューハイ', 'ワイン', '焼酎', '水', 'レモンサワー'
   ];
 
-  if (drinkKeywords.some((word) => label.includes(word) || lower.includes(word))) {
+  const orderNameLower = order.name.toLowerCase();
+  if (drinkKeywords.some(keyword => orderNameLower.includes(keyword.toLowerCase()))) {
     return 'blue';
   }
 
@@ -33,24 +68,76 @@ const sortByColor = (items: Item[]) => {
 };
 
 export default function OrderBoard() {
-  const [pending, setPending] = useState<Item[]>([
-    { id: 1, label: '1番卓：呼び出し', color: getColorFromLabel('1番卓：呼び出し') },
-    { id: 2, label: '2番卓：生ビール2つ', color: getColorFromLabel('2番卓：生ビール2つ') },
-    { id: 3, label: '3番卓：ウーロン茶1杯', color: getColorFromLabel('3番卓：ウーロン茶1杯') },
-    { id: 4, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 5, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 6, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 7, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 8, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 9, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 10, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 11, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 12, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 13, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-    { id: 14, label: '4番卓：取り皿3枚', color: getColorFromLabel('4番卓：取り皿3枚') },
-    { id: 15, label: '5番卓：おしぼり2つ', color: getColorFromLabel('5番卓：おしぼり2つ') },
-  ]);
+  const [pending, setPending] = useState<Item[]>([]);
   const [done, setDone] = useState<Item[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [doneOrderIds, setDoneOrderIds] = useState<Set<number>>(new Set());
+
+  // メニューアイテム取得
+  useEffect(() => {
+    const fetchMenuItems = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/menu/items');
+        if (response.ok) {
+          const data = await response.json();
+          setMenuItems(data);
+        }
+      } catch (error) {
+        console.error('メニューアイテムの取得に失敗しました:', error);
+      }
+    };
+
+    fetchMenuItems();
+  }, []);
+
+  // 注文取得
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/orders');
+        if (response.ok) {
+          const orders: Order[] = await response.json();
+
+          const items: Item[] = orders
+            .filter(order => !doneOrderIds.has(order.id))
+            .map(order => {
+              const tableMatch = order.table.match(/(\d+)/);
+              const tableNum = tableMatch ? tableMatch[1] : order.table;
+
+              const quantityMatch = order.quantity.match(/(\d+)/);
+              const quantity = quantityMatch ? quantityMatch[1] : '1';
+
+              let label = '';
+              if (order.name.includes('呼び出し')) {
+                label = `${tableNum}番卓：呼び出し`;
+              } else {
+                const unit =
+                  menuItems &&
+                  menuItems.length > 0 &&
+                  menuItems.find(mi => mi.name === order.name && mi.tabId === 4)
+                    ? '杯'
+                    : '個';
+                label = `${tableNum}番卓：${order.name}${quantity}${unit}`;
+              }
+
+              return {
+                id: order.id,
+                label,
+                color: getColorFromOrder(order, menuItems || []),
+              };
+            });
+
+          setPending(items);
+        }
+      } catch (error) {
+        console.error('注文の取得に失敗しました:', error);
+      }
+    };
+
+    fetchOrders();
+    const interval = setInterval(fetchOrders, 2000);
+    return () => clearInterval(interval);
+  }, [menuItems.length, doneOrderIds.size]);
 
   const onDragStart = (e: React.DragEvent, item: Item, from: 'done' | 'pending') => {
     e.dataTransfer.setData('item', JSON.stringify({ item, from }));
@@ -64,48 +151,68 @@ export default function OrderBoard() {
     if (to === 'done') {
       setDone(sortByColor([...done, data.item]));
       setPending(pending.filter((i) => i.id !== data.item.id));
+      setDoneOrderIds(prev => new Set([...prev, data.item.id]));
     } else {
       setPending(sortByColor([...pending, data.item]));
       setDone(done.filter((i) => i.id !== data.item.id));
+      setDoneOrderIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(data.item.id);
+        return newSet;
+      });
     }
   };
 
-  const clearDone = () => {
-    if (done.length === 0) return;
-    if (confirm('済エリアの項目をすべて削除しますか？')) {
-      setDone([]);
-    }
+  // 🔥 追加： ゴミ箱にドロップされたら削除
+  const onDropToTrash = (e: React.DragEvent) => {
+    e.preventDefault();
+    const data = JSON.parse(e.dataTransfer.getData('item'));
+
+    // "済" からのみ削除
+    if (data.from !== "done") return;
+
+    const id = data.item.id;
+
+    setDone(done.filter((i) => i.id !== id));
+
+    setDoneOrderIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
   };
 
   return (
     <div className="flex justify-center items-center w-screen h-screen bg-gray-300">
-      {/* メインコンテナ（固定サイズ） */}
       <div
         className="relative flex overflow-hidden rounded-xl shadow-lg border border-gray-400"
         style={{ width: '840px', height: '700px' }}
       >
-        {/* 背景2色分割 */}
+        {/* 背景2色 */}
         <div className="absolute inset-0 flex z-0">
           <div className="w-2/5" style={{ backgroundColor: '#FFD5D5' }}></div>
           <div className="flex-1" style={{ backgroundColor: '#FFFAE2' }}></div>
         </div>
 
-        {/* コンテンツ */}
-        <div className="relative flex w-full h-full z-10">
+        {/* タイトル（absolute） */}
+        <h1 className="absolute left-6 top-6 text-4xl z-20">済</h1>
+        <h1 className="absolute right-6 top-6 text-4xl z-20">未</h1>
+
+        {/* メインエリア */}
+        <div className="relative flex w-full h-full z-10 pt-20">
           {/* 済エリア */}
           <div
-            className="w-2/5 p-4 flex flex-col items-center overflow-y-auto"
+            className="w-2/5 p-6 flex flex-col overflow-y-auto relative"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => onDrop(e, 'done')}
           >
-            <h1 className="text-3xl mb-4">済</h1>
-            <div className="flex flex-col gap-3 pb-10">
-              {sortByColor(done).map((item) => (
+            <div className="flex flex-col gap-4 pb-20">
+              {sortByColor(done).map((item, index) => (
                 <button
-                  key={item.id}
+                  key={`done-${item.id}-${index}`}
                   draggable
                   onDragStart={(e) => onDragStart(e, item, 'done')}
-                  className={`px-3 py-2 rounded border shadow ${
+                  className={`px-4 py-2 rounded border shadow ${
                     item.color === 'red'
                       ? 'bg-red-500 text-white'
                       : item.color === 'blue'
@@ -116,23 +223,31 @@ export default function OrderBoard() {
                   {item.label}
                 </button>
               ))}
+            </div>
+
+            {/* 🔥 追加： ごみ箱（済エリア右下固定） */}
+            <div
+              className="absolute bottom-4 right-4 p-3 bg-white rounded-full shadow-lg border cursor-pointer"
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={onDropToTrash}
+            >
+              <Trash2 size={32} className="text-gray-600" />
             </div>
           </div>
 
           {/* 未エリア */}
           <div
-            className="flex-1 p-4 flex flex-col items-center overflow-y-auto"
+            className="flex-1 p-6 flex flex-col overflow-y-auto"
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => onDrop(e, 'pending')}
           >
-            <h1 className="text-3xl mb-4">未</h1>
-            <div className="flex flex-col gap-3 pb-10">
-              {sortByColor(pending).map((item) => (
+            <div className="flex flex-col gap-4 pb-20">
+              {sortByColor(pending).map((item, index) => (
                 <button
-                  key={item.id}
+                  key={`pending-${item.id}-${index}`}
                   draggable
                   onDragStart={(e) => onDragStart(e, item, 'pending')}
-                  className={`px-3 py-2 rounded border shadow ${
+                  className={`px-4 py-2 rounded border shadow ${
                     item.color === 'red'
                       ? 'bg-red-500 text-white'
                       : item.color === 'blue'
@@ -145,17 +260,6 @@ export default function OrderBoard() {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* ゴミ箱 */}
-        <div className="absolute bottom-4 left-[20%] flex justify-center items-center z-20">
-          <button
-            onClick={clearDone}
-            className="bg-white rounded-full shadow-lg p-3 border hover:bg-gray-100 transition"
-            title="済エリアを全削除"
-          >
-            <Trash2 size={40} className="text-gray-700" />
-          </button>
         </div>
       </div>
     </div>
