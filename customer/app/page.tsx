@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { MdNotifications, MdShoppingCart, MdSettings, MdPayment, MdAddShoppingCart, MdRestaurant } from "react-icons/md";
 
 export function Sample1() {
   const tabs = ["おすすめ", "おつまみ", "揚げ物", "飲み物"];
@@ -7,6 +8,7 @@ export function Sample1() {
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
+  const [isOrdering, setIsOrdering] = useState(false);
 
   // アクセシビリティ設定
   const [volume, setVolume] = useState(50);
@@ -17,6 +19,9 @@ export function Sample1() {
   const removeItem = (index: number) =>
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
+  const handleOrder = () => {
+    alert("注文機能は実装されていません");
+  };
 
   const tabItems: Record<string, string[]> = {
     おすすめ: ["ラーメン", "唐揚げ", "ポテト"],
@@ -231,6 +236,7 @@ export function Sample2() {
   const [cartOpen, setCartOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
+  const [isOrdering, setIsOrdering] = useState(false);
 
   // アクセシビリティ設定
   const [volume, setVolume] = useState(50);
@@ -241,6 +247,9 @@ export function Sample2() {
   const removeItem = (index: number) =>
     setCartItems((prev) => prev.filter((_, i) => i !== index));
   const clearCart = () => setCartItems([]);
+  const handleOrder = () => {
+    alert("注文機能は実装されていません");
+  };
 
   const tabItems: Record<string, string[]> = {
     おすすめ: ["ラーメン", "唐揚げ", "ポテト"],
@@ -475,11 +484,17 @@ export default function Sample3() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cartItems, setCartItems] = useState<string[]>([]);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [isCheckout, setIsCheckout] = useState(false); // 会計状態
 
   // アクセシビリティ設定
   const [volume, setVolume] = useState(50);
   const [fontSize, setFontSize] = useState(16);
   const [ageGroup, setAgeGroup] = useState("一般");
+
+  // 初回設定が完了したかどうかを追跡
+  const isInitialized = useRef(false);
+  // ユーザーが手動でタブを選択したかどうかを追跡
+  const userSelectedTab = useRef(false);
 
   const addItemToCart = (item: string) => setCartItems((prev) => [...prev, item]);
   const removeItem = (index: number) =>
@@ -516,8 +531,13 @@ export default function Sample3() {
           });
           setTabItems(grouped);
           
-          // グループ化後にactiveTabを設定（初回のみ）
-          if (tabsData.length > 0 && activeTab === "") {
+          // 初回のみactiveTabを設定（ユーザーが選択していない場合のみ）
+          if (!isInitialized.current && tabsData.length > 0) {
+            setActiveTab(tabsData[0].name);
+            isInitialized.current = true;
+          }
+          // activeTabが存在するが、そのタブが削除された場合は最初のタブに戻す
+          if (userSelectedTab.current && tabsData.length > 0 && activeTab !== "" && !tabsData.some(tab => tab.name === activeTab)) {
             setActiveTab(tabsData[0].name);
           }
         } else {
@@ -532,7 +552,7 @@ export default function Sample3() {
     // 定期的に更新（5秒ごと）
     const interval = setInterval(fetchMenu, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [activeTab]);
 
   // 注文を送信する関数
   const handleOrder = async () => {
@@ -761,56 +781,97 @@ export default function Sample3() {
 
   return (
     <div
-      className="min-h-screen bg-white flex flex-col items-center pt-6 relative pb-24 transition-all"
-      style={{ fontSize: `${fontSize}px` }}
+      className="min-h-screen bg-gray-200 flex flex-col transition-all"
+      style={{ fontSize: `${fontSize}px`, paddingTop: '120px', paddingBottom: '140px' }}
     >
       {/* タブメニュー */}
-      <div className="flex items-center justify-between bg-gray-100 px-6 py-3 shadow-sm w-full">
-        <div className="flex space-x-2">
+      <div className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-6 w-full" style={{ backgroundColor: '#2C2C2C' }}>
+        <div className="flex space-x-3">
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.name)}
-              className={`px-6 py-3 rounded-t-md font-medium text-sm transition-all ${
+              onClick={() => {
+                if (!isCheckout) {
+                  userSelectedTab.current = true;
+                  setActiveTab(tab.name);
+                }
+              }}
+              disabled={isCheckout}
+              className={`px-8 py-4 rounded-lg font-medium text-base transition-all ${
                 activeTab === tab.name
-                  ? "bg-orange-400 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-200"
-              }`}
+                  ? "bg-orange-500 text-white"
+                  : "bg-white text-gray-800"
+              } ${isCheckout ? "opacity-50 cursor-not-allowed" : ""}`}
             >
               {tab.name}
             </button>
           ))}
         </div>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setIsCheckout(!isCheckout)}
+            className={`px-6 py-3 rounded-lg font-medium text-sm transition-all flex flex-col items-center justify-center ${
+              isCheckout
+                ? "bg-red-500 text-white"
+                : "bg-gray-600 text-white hover:bg-gray-700"
+            }`}
+          >
+            <MdPayment size={24} className="mb-1" />
+            <span>{isCheckout ? "会計中" : "会計"}</span>
+          </button>
         <button
           onClick={() => setSettingsOpen(true)}
-          className="text-gray-600 hover:text-gray-800 text-3xl"
+            className="text-gray-300 hover:text-white flex flex-col items-center justify-center"
         >
-          ⚙️
+          <MdSettings size={32} className="mb-1" />
+          <span className="text-xs">設定</span>
         </button>
+        </div>
       </div>
 
       {/* コンテンツ枠 */}
-      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 mt-8 w-full px-6">
-        {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
-          tabItems[activeTab].map((item) => (
+      <div className="bg-gray-200 w-full px-6 py-8">
+        <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto">
+          {activeTab && tabItems[activeTab] && tabItems[activeTab].length > 0 ? (
+            tabItems[activeTab].map((item) => (
           <div
             key={item}
-            className="bg-gray-100 rounded-lg border border-gray-200 flex flex-col justify-center items-center hover:bg-orange-50 transition h-28"
-          >
-            <p className="text-gray-700 text-sm">{item}</p>
+                className="bg-white rounded-xl border-2 border-white flex flex-col items-center justify-center hover:shadow-lg transition-all h-64 relative overflow-hidden"
+              >
+                {/* 商品画像 */}
+                <div className="w-full h-40 bg-gray-100 flex items-center justify-center mb-2 overflow-hidden rounded-t-xl">
+                  <img
+                    src={`/${item}.jpg`}
+                    alt={item}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      // 画像が存在しない場合はプレースホルダーを表示
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<span class="text-gray-400 text-4xl">📷</span>';
+                    }}
+                  />
+                </div>
+                <p className="text-gray-800 text-lg font-medium mb-3">{item}</p>
             <button
-              onClick={() => addItemToCart(item)}
-              className="mt-2 text-xs bg-orange-400 text-white px-2 py-1 rounded hover:bg-orange-500"
+                  onClick={() => !isCheckout && addItemToCart(item)}
+                  disabled={isCheckout}
+                  className={`px-6 py-2 rounded-lg font-medium transition-all flex flex-col items-center justify-center ${
+                    isCheckout
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-orange-500 text-white hover:bg-orange-600"
+                  }`}
             >
-              追加
+              <MdAddShoppingCart size={20} className="mb-1" />
+              <span>追加</span>
             </button>
           </div>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12 text-gray-500">
-            <p>メニューを読み込み中...</p>
-          </div>
-        )}
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              <p>メニューを読み込み中...</p>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* カートモーダル */}
@@ -933,16 +994,22 @@ export default function Sample3() {
       )}
 
       {/* 下部ナビゲーション */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 py-3 flex justify-center items-center space-x-16">
-        <button className="text-gray-600 hover:text-gray-800 text-3xl">🔔</button>
+      <div className="fixed bottom-0 left-0 right-0 z-50 py-4 flex justify-center items-center space-x-20" style={{ backgroundColor: '#2C2C2C' }}>
+        <div className="flex flex-col items-center">
+          <button className="text-gray-300 hover:text-white mb-1">
+            <MdNotifications size={48} />
+          </button>
+          <span className="text-gray-300 text-xs">呼び出し</span>
+        </div>
 
         <button
-          onClick={() => setCartOpen(true)}
-          className="relative text-gray-600 hover:text-gray-800 text-6xl"
+          onClick={() => !isCheckout && setCartOpen(true)}
+          disabled={isCheckout}
+          className="relative text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          🛒
+          <MdShoppingCart size={64} />
           {cartItems.length > 0 && (
-            <span className="absolute -top-3 -right-6 bg-orange-400 text-white font-bold w-8 h-8 flex items-center justify-center rounded-full text-sm">
+            <span className="absolute -top-2 -right-4 bg-orange-500 text-white font-bold w-8 h-8 flex items-center justify-center rounded-full text-sm">
               {cartItems.length}
             </span>
           )}
@@ -950,10 +1017,14 @@ export default function Sample3() {
 
         <button
           onClick={handleOrder}
-          disabled={isOrdering || cartItems.length === 0}
-          className="bg-black text-white px-8 py-2 rounded-md hover:bg-gray-800 transition text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isOrdering || cartItems.length === 0 || isCheckout}
+          className="text-white px-10 py-3 rounded-lg transition text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex flex-col items-center justify-center"
+          style={{ backgroundColor: '#2C2C2C' }}
+          onMouseEnter={(e) => !isOrdering && cartItems.length > 0 && !isCheckout && (e.currentTarget.style.backgroundColor = '#1F1F1F')}
+          onMouseLeave={(e) => !isOrdering && cartItems.length > 0 && !isCheckout && (e.currentTarget.style.backgroundColor = '#2C2C2C')}
         >
-          {isOrdering ? "送信中..." : "注文"}
+          <MdRestaurant size={24} className="mb-1" />
+          <span>{isOrdering ? "送信中..." : "注文"}</span>
         </button>
       </div>
     </div>

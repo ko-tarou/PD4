@@ -49,6 +49,8 @@ let menuItems: MenuItem[] = [
   { id: 1, tabId: 1, name: 'ラーメン', price: 680, category: '一品' },
   { id: 2, tabId: 1, name: '唐揚げ', price: 580, category: '揚げ' },
   { id: 3, tabId: 1, name: 'ポテト', price: 380, category: '一品' },
+  { id: 25, tabId: 1, name: 'ねぎま', price: 480, category: '一品' },
+  { id: 26, tabId: 1, name: '焼き鳥', price: 580, category: '一品' },
   // おつまみタブ
   { id: 4, tabId: 2, name: 'ラーメン', price: 680, category: '一品' },
   { id: 5, tabId: 2, name: 'キムチ', price: 280, category: '一品' },
@@ -73,6 +75,8 @@ let menuItems: MenuItem[] = [
   { id: 22, tabId: 4, name: 'ビール', price: 480, category: '一品' },
   { id: 23, tabId: 4, name: 'コーラ', price: 200, category: '一品' },
   { id: 24, tabId: 4, name: 'ウーロン茶', price: 200, category: '一品' },
+  { id: 27, tabId: 4, name: 'トロピカルジュース', price: 350, category: '一品' },
+  { id: 28, tabId: 4, name: 'メロンソーダ', price: 350, category: '一品' },
 ];
 
 // ========== メニュータブ管理API ==========
